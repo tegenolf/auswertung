@@ -10,9 +10,11 @@
         
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
+        <link href="{% static "grading/images/favicon.ico" %}" rel="icon" type="image/vnd.microsoft.icon">
+
         <link rel="stylesheet" href="{% static "grading/css/style.css" %}">
 
-        <script src="https://unpkg.com/hyperscript.org@0.9.14"></script>
+        <script src="{% static "grading/js/hyperscript.min.js" %}"></script>
         {% htmx_script %}
 
         {% block head %} {% endblock head %}

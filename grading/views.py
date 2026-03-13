@@ -569,7 +569,8 @@ def database_backup_complete(request):
     user = request.user
     if not (user.is_superuser or user.is_staff):
         return HttpResponseRedirect(reverse("grading:database"))
-    output = open('grading/database_backup_complete.json', 'w')
+    filename = os.path.join(os.path.dirname(__file__), 'database_backup_complete.json')
+    output = open(filename, 'w')
     call_command('dumpdata',indent=4, stdout=output)
     output.close()
     logs = Logs(user=request.user, ip=get_client_ip(request) ,athlete_id=None, competition_id=None, discipline_id=None, log_text="Datenbank exportiert", log_date=timezone.now())
@@ -591,7 +592,8 @@ def database_backup(request):
     user = request.user
     if not (user.is_superuser or user.is_staff):
         return HttpResponseRedirect(reverse("grading:database"))
-    output = open('grading/database_backup_partial.json', 'w')
+    filename = os.path.join(os.path.dirname(__file__), 'database_backup_partial.json')
+    output = open(filename, 'w')
     call_command('dumpdata', 'grading.Athlete', 'grading.Competition', 'grading.Discipline', 'grading.Comp_Dis', 'grading.Athlete_Comp', 'grading.Grading', 'grading.Permission', 'grading.Logs', indent=4, stdout=output)
     output.close()
     logs = Logs(user=request.user, ip=get_client_ip(request) ,athlete_id=None, competition_id=None, discipline_id=None, log_text="Daten exportiert", log_date=timezone.now())
@@ -615,11 +617,12 @@ def database_restore(request):
         return HttpResponseRedirect(reverse("grading:database"))
     try:
         restore_file = request.FILES['restore_file']
-        with open('grading/restore_temp.json', 'wb+') as destination:
+        filename = os.path.join(os.path.dirname(__file__), 'grading/restore_temp.json')
+        with open(filename, 'wb+') as destination:
             for chunk in restore_file.chunks():
                 destination.write(chunk)
         call_command('loaddata', 'grading/restore_temp.json')
-        os.remove('grading/restore_temp.json')
+        os.remove(filename)
     except (KeyError, ValueError):
         context = read_settings_xml()
         context['error_message'] = "Fehler beim Hochladen der Datei."
