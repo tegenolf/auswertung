@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+
+{% block success %}
+    {% if success_message %}<p><strong>{{ success_message }}</strong></p>{% endif %}
+{% endblock success %}
+
+{% block content %}    
+<h1>Kampfrichter / Benutzer</h1>
+{% if judges_dict %}
+    {% for key, permission_list in judges_dict.items %}
+        <h2>{{ key }}</h2>
+        {% if permission_list %}
+            <ul>
+                {% for permission in permission_list %}
+                    <li>WK {{permission.comp_dis.competition_id}}: {{permission.comp_dis.competition.name}} - {{permission.comp_dis.discipline.bezeichnung}}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>Keine Wettkämpfe/Disziplinen zugewiesen.</p>
+        {% endif %}
+    {% endfor %}
+    <button><a href="{% url "grading:judges_form" %}">Kampfrichter bearbeiten</a></button>
+{% else %}
+    <p>Keine Benutzer außer den Administratoren angelegt.</p>
+{% endif %}
+
+{% endblock content %}

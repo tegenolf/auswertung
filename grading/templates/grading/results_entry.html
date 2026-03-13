@@ -1,0 +1,21 @@
+{% if selected_competition_id %}
+    <h2>Wettkampf {{ selected_competition_id }} - {{ selected_competition_name }}</h2>
+{% else %}
+    <p>Bitte einen Wettkampf auswählen, um die Ergebnisse anzuzeigen.</p>
+{% endif %}
+
+{% if ranking_list %}
+    <div id="ranking-list-container">
+        <table class="no_border">
+            <tr><th>Rang</th><th>SportlerIn</th><th>Punktzahl</th></tr>
+            {% for ranking in ranking_list %}
+                 <tr><td>{{ ranking.ranking}}</td><td>{{ ranking.athlete.vorname }} {{ ranking.athlete.nachname }}<br />&nbsp;&nbsp;<span class="small">({{ ranking.athlete.geburtsjahr }} - {{ ranking.athlete.verein }})</span>
+                    <br />&nbsp;&nbsp;<span class="small">
+                        {% for dis in ranking.disciplines %}{{ dis.discipline.bezeichnung }}: {{dis.score}}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </span></td><td>{{ ranking.score }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+        <p>In diesem Wettkamof sind keine Ergebnisse vorhanden.</p>
+    {% endif %}

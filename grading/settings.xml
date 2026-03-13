@@ -1,0 +1,18 @@
+<settings>
+    <wk_title>Gau-Einzel-Finals Ger&#228;tturnen m&#228;nnlich 2026</wk_title>
+    <wk_type>einzel</wk_type>
+    <database1>
+        <name>gt_einzel_m2026</name>
+        <user>remoteuser</user>
+        <password>tgsn1862</password>
+        <host>192.168.220.136</host>
+        <port>3306</port>
+    </database1>
+    <database2>
+        <name />
+        <user />
+        <password />
+        <host />
+        <port />
+    </database2>
+</settings>

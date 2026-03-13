@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+
+{% block content %}    
+    <h1>{{ athlete.vorname }} {{ athlete.nachname }} (Startnr. {{ athlete.sid }})</h1>
+    <p>
+        <strong>Jahrgang:</strong> {{ athlete.geburtsjahr }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+        <strong>Verein:</strong> {{ athlete.verein }}
+    </p>
+    <p><strong>Wettkämpfe:</strong></p>
+    <ul>    
+    {% for comp in competition_list %}
+        <li>WK {{ comp.competition_id }}: {{ comp.competition.name }}</li>
+        <ul>
+        {% for key, dis_list in disciplines_dict.items %}
+            {% if key == comp.competition_id %}
+                {% for dis in dis_list.0 %}
+                <li><a href="{% url 'grading:grade' athlete.sid %}?cid={{comp.competition_id}}&did={{dis.discipline_id}}">{{dis.discipline.bezeichnung}}</a></li>
+                {% endfor %}
+                {% if dis_list.1 %}
+                    <li><strong>Disziplinen ohne Bewertungsrecht:</strong></li>
+                    {% for dis in dis_list.1 %}
+                        <li>{{dis.discipline.bezeichnung}}</li>
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
+        {% endfor %}
+        </ul>
+    {% endfor %}
+    </ul>
+
+{% endblock content %}

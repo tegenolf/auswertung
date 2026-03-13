@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Sportler-Übersicht</h1>
+    {% if athletes_list %}
+        <table>
+            <tr><th>Startnr.</th><th>Name</th><th>Jahrgang</th><th>Verein</th></tr>
+        {% for athlete in athletes_list %}
+             <tr><td>{{ athlete.sid}}</td><td><a href="{% url 'grading:detail' athlete.sid %}">{{ athlete.vorname }} {{ athlete.nachname }}</a></td><td>{{ athlete.geburtsjahr }}</td><td>{{ athlete.verein }}</td></tr>
+        {% endfor %}
+        </table>
+    {% else %}
+        <p>Keine Sportler vorhanden, die bewertet werden dürfen.</p>
+    {% endif %}
+
+    {% if not_allowed_athletes %} 
+        <h2>Sportler ohne Bewertungsrechte:</h2>
+        <table>
+            <tr><th>Startnr.</th><th>Name</th><th>Jahrgang</th><th>Verein</th></tr>
+        {% for athlete in not_allowed_athletes %}
+            <tr><td>{{ athlete.sid}}</td><td>{{ athlete.vorname }} {{ athlete.nachname }}</td><td>{{ athlete.geburtsjahr }}</td><td>{{ athlete.verein }}</td></tr>
+        {% endfor %}
+        </table>
+    {% endif %}
+{% endblock content %}

@@ -1,0 +1,490 @@
+[
+{
+    "model": "grading.athlete",
+    "pk": 1,
+    "fields": {
+        "vorname": "Max",
+        "nachname": "Mustermann",
+        "geburtsjahr": 1988,
+        "verein": "TBW"
+    }
+},
+{
+    "model": "grading.athlete",
+    "pk": 2,
+    "fields": {
+        "vorname": "Anna",
+        "nachname": "Musterfrau",
+        "geburtsjahr": 1994,
+        "verein": "TUS Dotzheim"
+    }
+},
+{
+    "model": "grading.competition",
+    "pk": 1,
+    "fields": {
+        "name": "P4-P9 männlich"
+    }
+},
+{
+    "model": "grading.competition",
+    "pk": 2,
+    "fields": {
+        "name": "P4-P9 weiblich"
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 1,
+    "fields": {
+        "bezeichnung": "Sprung",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 2,
+    "fields": {
+        "bezeichnung": "Stufenbarren",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 3,
+    "fields": {
+        "bezeichnung": "Schwebebalken",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 4,
+    "fields": {
+        "bezeichnung": "Boden",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 5,
+    "fields": {
+        "bezeichnung": "Pauschenpferd",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 6,
+    "fields": {
+        "bezeichnung": "Ringe",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 7,
+    "fields": {
+        "bezeichnung": "Barren",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.discipline",
+    "pk": 8,
+    "fields": {
+        "bezeichnung": "Reck",
+        "einheit": "Pkt.",
+        "gewichtung": 1.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 1,
+    "fields": {
+        "competition": 1,
+        "discipline": 4,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 2,
+    "fields": {
+        "competition": 1,
+        "discipline": 5,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 3,
+    "fields": {
+        "competition": 1,
+        "discipline": 6,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 4,
+    "fields": {
+        "competition": 1,
+        "discipline": 1,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 5,
+    "fields": {
+        "competition": 1,
+        "discipline": 7,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 6,
+    "fields": {
+        "competition": 1,
+        "discipline": 8,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 7,
+    "fields": {
+        "competition": 2,
+        "discipline": 1,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 8,
+    "fields": {
+        "competition": 2,
+        "discipline": 2,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 9,
+    "fields": {
+        "competition": 2,
+        "discipline": 3,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.comp_dis",
+    "pk": 10,
+    "fields": {
+        "competition": 2,
+        "discipline": 4,
+        "max_score": 19.0
+    }
+},
+{
+    "model": "grading.athlete_comp",
+    "pk": 1,
+    "fields": {
+        "athlete": 1,
+        "competition": 1
+    }
+},
+{
+    "model": "grading.athlete_comp",
+    "pk": 2,
+    "fields": {
+        "athlete": 2,
+        "competition": 2
+    }
+},
+{
+    "model": "grading.grading",
+    "pk": 4,
+    "fields": {
+        "athlete": 1,
+        "discipline": 4,
+        "competition": 1,
+        "kari1": 1.3,
+        "kari2": 1.4,
+        "kari3": 1.5,
+        "kari4": 1.3,
+        "kari5": 0.0,
+        "awert": 0.0,
+        "ewert": 8.65,
+        "dwert": 9.0,
+        "score": 17.65
+    }
+},
+{
+    "model": "grading.grading",
+    "pk": 5,
+    "fields": {
+        "athlete": 1,
+        "discipline": 8,
+        "competition": 1,
+        "kari1": 1.5,
+        "kari2": 1.2,
+        "kari3": 1.3,
+        "kari4": 0.0,
+        "kari5": 0.0,
+        "awert": 0.0,
+        "ewert": 8.65,
+        "dwert": 9.0,
+        "score": 17.65
+    }
+},
+{
+    "model": "grading.grading",
+    "pk": 6,
+    "fields": {
+        "athlete": 2,
+        "discipline": 1,
+        "competition": 2,
+        "kari1": 2.5,
+        "kari2": 1.6,
+        "kari3": 0.0,
+        "kari4": 0.0,
+        "kari5": 0.0,
+        "awert": 0.0,
+        "ewert": 7.95,
+        "dwert": 9.0,
+        "score": 16.95
+    }
+},
+{
+    "model": "grading.permission",
+    "pk": 40,
+    "fields": {
+        "user": 2,
+        "comp_dis": 3
+    }
+},
+{
+    "model": "grading.permission",
+    "pk": 41,
+    "fields": {
+        "user": 2,
+        "comp_dis": 4
+    }
+},
+{
+    "model": "grading.permission",
+    "pk": 42,
+    "fields": {
+        "user": 2,
+        "comp_dis": 5
+    }
+},
+{
+    "model": "grading.permission",
+    "pk": 43,
+    "fields": {
+        "user": 2,
+        "comp_dis": 8
+    }
+},
+{
+    "model": "grading.permission",
+    "pk": 44,
+    "fields": {
+        "user": 2,
+        "comp_dis": 9
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 1,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung hinzugefügt",
+        "log_date": "2026-01-24T22:35:34.521Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 2,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-24T22:36:40.236Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 3,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-24T22:56:12.071Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 4,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-25T18:50:24.263Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 5,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-26T21:16:58.579Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 6,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-26T21:21:09.359Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 7,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-26T22:17:44.327Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 8,
+    "fields": {
+        "user": 1,
+        "ip": null,
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-26T22:18:30.317Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 9,
+    "fields": {
+        "user": 1,
+        "ip": "127.0.0.1",
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-01-29T00:11:49.545Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 10,
+    "fields": {
+        "user": 1,
+        "ip": "192.168.2.190",
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 8,
+        "log_text": "Wertung hinzugefügt",
+        "log_date": "2026-02-03T23:31:01.023Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 11,
+    "fields": {
+        "user": 1,
+        "ip": "192.168.2.119",
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-02-06T22:47:14.760Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 12,
+    "fields": {
+        "user": 1,
+        "ip": "192.168.178.93",
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-02-07T17:19:37.010Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 13,
+    "fields": {
+        "user": 1,
+        "ip": "192.168.178.93",
+        "athlete": 2,
+        "competition": 2,
+        "discipline": 1,
+        "log_text": "Wertung hinzugefügt",
+        "log_date": "2026-02-07T17:30:47.888Z"
+    }
+},
+{
+    "model": "grading.logs",
+    "pk": 14,
+    "fields": {
+        "user": 1,
+        "ip": "192.168.178.93",
+        "athlete": 1,
+        "competition": 1,
+        "discipline": 4,
+        "log_text": "Wertung geändert",
+        "log_date": "2026-02-07T17:39:57.011Z"
+    }
+}
+]

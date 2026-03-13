@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Ergebnisse</h1>
+    <!-- Competition-Tabs-->
+    {% if competitions %}
+        <div class="tabs" id="competition-tabs" hx-target="#tabs-content" hx-swap="innerHTML" _="on htmx:afterOnLoad take .active for event.target">
+            {% for comp in competitions %}
+                <a hx-get="{% url 'grading:all_results' %}?cid={{ comp.cid }}" class="tab {% if comp.cid == selected_competition_id %}active{% endif %}">WK {{ comp.cid }}</a>
+            {% endfor %}
+        </div>
+        <div id="tabs-content">
+            {% include 'grading/results_entry.html' %}
+        </div>
+    {% endif %}
+    
+{% endblock content %}

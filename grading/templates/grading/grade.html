@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+{% block success %}
+    {% if success_message %}<p><strong>{{ success_message }}</strong></p>{% endif %}
+{% endblock success %}
+
+{% block content %}
+    <h1>{{ athlete.vorname }} {{ athlete.nachname }} (Startnr. {{ athlete.sid }})</h1>
+    <p>
+        <strong>Jahrgang:</strong> {{ athlete.geburtsjahr }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <strong>Verein:</strong> {{ athlete.verein }}
+    </p>
+    {% if not_changeable %}
+    <form class="grade" action="" method="post">
+    {% else %}
+    <form class="grade" action="{% url 'grading:save_grade' athlete.sid %}" method="post">
+    {% endif %}
+        {% csrf_token %}
+        <fieldset>
+            <legend>
+                <h2>WK {{ competition.cid}}: {{ competition.name }} - Disziplin: {{ discipline.bezeichnung }}</h2>
+            </legend>
+        
+            <input type="hidden" name="did" value="{{ discipline.did }}">
+            <input type="hidden" name="cid" value="{{ competition.cid }}">
+            <input type="hidden" name="dbid" value="{{ athlete.dbid }}">
+            <!--<label for="kari5">Kari 5:</label>-->
+            <input type="hidden" name="kari5" id="kari5" value="0">
+            
+            <table>
+                <caption>Abzüge:</caption>
+                <tr class="abzuege">
+                    <td>
+                        <label for="kari1">Kari 1 (OK):</label>
+                        <input type="{% if not_changeable %}text{% else %}number{% endif %}" name="kari1" id="kari1" value="{{initial_grading.kari1}}" step="0.1" min="0" max="10" {% if not_changeable %}readonly{% endif %}>
+                    </td>
+                    <td>
+                        <label for="kari2">Kari 2:</label>
+                        <input type="{% if not_changeable %}text{% else %}number{% endif %}" name="kari2" id="kari2" value="{{initial_grading.kari2}}" step="0.1" min="0" max="10" {% if not_changeable %}readonly{% endif %}>
+                    </td>
+                    <td>
+                        <label for="kari3">Kari 3:</label>
+                        <input type="{% if not_changeable %}text{% else %}number{% endif %}" name="kari3" id="kari3" value="{{initial_grading.kari3}}" step="0.1" min="0" max="10" {% if not_changeable %}readonly{% endif %}>
+                    </td>
+                    <td>
+                        <label for="kari4">Kari 4:</label>
+                        <input type="{% if not_changeable %}text{% else %}number{% endif %}" name="kari4" id="kari4" value="{{initial_grading.kari4}}" step="0.1" min="0" max="10" {% if not_changeable %}readonly{% endif %}>
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <caption>Wertung:</caption>
+                <tr>
+                    <td>
+                        <label for="ewert">E-Note:</label>
+                        <input type="text" name="ewert" id="ewert" value="{{initial_grading.ewert}}" step="0.001" min="0" max="10" readonly>
+                    </td>
+                    <td>
+                        <label for="dwert">D-Note:</label>
+                        <input type="{% if not_changeable %}text{% else %}number{% endif %}" name="dwert" id="dwert" value="{{initial_grading.dwert}}" step="0.001" min="0" max="10" {% if not_changeable %}readonly{% endif %}>
+                    </td>
+                    <td>
+                        <label for="awert">Neutrale Abzüge:</label>
+                        <input type="{% if not_changeable %}text{% else %}number{% endif %}" name="awert" id="awert" value="{{initial_grading.awert}}" step="0.01" min="0" max="10" {% if not_changeable %}readonly{% endif %}>
+                    </td>
+                    <td>
+                        <label for="score">Punktzahl:</label>
+                        <input type="text" name="score" id="score" value="{{initial_grading.score}}" step="0.001" min="0" max="20" readonly>
+                    </td>
+                </tr>
+            </table>
+        </fieldset>
+        {% if not_changeable %}
+        </form>
+        <button id="submit" class="grade">Wertung korrigieren</button>
+        {% else %}
+        <input id="submit" type="submit" value="Speichern" class="speichern">
+        </form>
+        {% endif %}
+{% endblock content %}
+
+{% block extra_js %}
+    {% if not_changeable %}
+    {{not_changeable}}
+    <script rel="text/javascript" language="javascript">
+        
+        function redirectToEdit() {
+            const cid = "{{ competition.cid }}";
+            const did = "{{ discipline.did }}";
+            const athlete_id = "{{ athlete.sid }}";
+            const edit_url = "{% url 'grading:grade' 0 %}?cid=" + cid + "&did=" + did;
+            const final_url = edit_url.replace("/0/", "/" + athlete_id + "/");
+            window.location.href = final_url;
+        }
+        const redirectButton = document.getElementById("submit");
+        redirectButton.addEventListener("click", redirectToEdit);
+    </script>
+    {% else %}
+    <script rel="text/javascript" language="javascript">
+        function updateScore() {
+            const kari1 = parseFloat(document.getElementById("kari1").value) || 0;
+            const kari2 = parseFloat(document.getElementById("kari2").value) || 0;
+            const kari3 = parseFloat(document.getElementById("kari3").value) || 0;
+            const kari4 = parseFloat(document.getElementById("kari4").value) || 0;
+            const kari5 = parseFloat(document.getElementById("kari5").value) || 0;
+
+            const karis = [kari1, kari2, kari3, kari4, kari5];
+            ewert = 0;
+            // Count number of nonzeros
+            const number = karis.filter(function(x) {return x > 0;}).length;
+            if (number == 1){
+                ewert = 10 - karis.reduce((a, b) => a + b, 0);
+            }
+            else if (number == 2){
+                ewert = 10 - (karis.reduce((a, b) => a + b, 0) / 2);
+            }
+            else if (number == 3){
+                // Alle drei Werte mitteln und das Ergebnis in der zweiten Nachkommastelle auf 0 bzw. 5 runden
+                const average = karis.reduce((a, b) => a + b, 0) / 3;
+                ewert = 10 - (Math.floor(average * 20) / 20);
+                //const mittel = Math.floor(10 * karis.slice(1,5).reduce((a, b) => a + b, 0) / 2) / 10;
+                //ewert = 10 - ((karis[0] + mittel) / 2);
+            }
+            else if (number == 4){
+                karis.sort((a, b) => a - b);
+                const trimmedKaris = karis.slice(2, 4);
+                ewert = 10 - (trimmedKaris.reduce((a, b) => a + b, 0) / trimmedKaris.length);
+            }
+            
+            
+            document.getElementById("ewert").value = ewert.toFixed(3);
+
+            const dwert = parseFloat(document.getElementById("dwert").value) || 0;
+            const awert = parseFloat(document.getElementById("awert").value) || 0;
+            const score = ewert + dwert - awert;
+            
+            document.getElementById("score").value = score.toFixed(3);
+        }
+        function fillEmptyFields() {
+            updateScore();
+
+            const kari1Element = document.getElementById("kari1");
+            if (!kari1Element.value) {
+                kari1Element.value = "0";
+            }
+            const kari2Element = document.getElementById("kari2");
+            if (!kari2Element.value) {
+                kari2Element.value = "0";
+            }
+            const kari3Element = document.getElementById("kari3");
+            if (!kari3Element.value) {
+                kari3Element.value = "0";
+            }
+            const kari4Element = document.getElementById("kari4");
+            if (!kari4Element.value) {
+                kari4Element.value = "0";
+            }
+            const kari5Element = document.getElementById("kari5");
+            if (!kari5Element.value) {
+                kari5Element.value = "0";
+            }
+            const awertElement = document.getElementById("awert");
+            if (!awertElement.value) {
+                awertElement.value = "0";
+            }
+            const dwertElement = document.getElementById("dwert");
+            if (!dwertElement.value) {
+                dwertElement.value = "0";
+            }
+            const ewertElement = document.getElementById("ewert");
+            if (!ewertElement.value) {
+                ewertElement.value = "0";
+            }
+            const scoreElement = document.getElementById("score");
+            if (!scoreElement.value) {
+                scoreElement.value = "0";
+            }
+        }
+        function initialize() {
+            var input_fields = document.querySelectorAll('input');
+            input_fields.forEach((input_field) => {
+                input_field.defaultValue = input_field.defaultValue.replace(',', '.');
+                input_field.value = input_field.defaultValue;});
+        }
+        window.onload = initialize();
+        const kari1Element = document.getElementById("kari1");
+        kari1Element.addEventListener("change",updateScore);
+        const kari2Element = document.getElementById("kari2");
+        kari2Element.addEventListener("change",updateScore);
+        const kari3Element = document.getElementById("kari3");
+        kari3Element.addEventListener("change",updateScore);
+        const kari4Element = document.getElementById("kari4");
+        kari4Element.addEventListener("change",updateScore);
+        const kari5Element = document.getElementById("kari5");
+        kari5Element.addEventListener("change",updateScore);
+        const dwertElement = document.getElementById("dwert");
+        dwertElement.addEventListener("change",updateScore);
+        const awertElement = document.getElementById("awert");
+        awertElement.addEventListener("change",updateScore);
+        const submitButton = document.getElementById("submit");
+        submitButton.addEventListener("click", fillEmptyFields);
+    </script>
+    {% endif %}
+{% endblock extra_js %}

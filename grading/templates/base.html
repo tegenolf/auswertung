@@ -1,0 +1,109 @@
+{% load django_htmx %}
+<!DOCTYPE html>
+<html>
+    <head> 
+        {% load static %}
+        <meta charset=""utf-8">
+        <title>Auswertungssoftware des Turngau Süd-Nassau e.V.</title>
+        <meta name="description" content="">
+        <meta name="author" content="Thilo Egenolf">
+        
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="stylesheet" href="{% static "grading/css/style.css" %}">
+
+        <script src="https://unpkg.com/hyperscript.org@0.9.14"></script>
+        {% htmx_script %}
+
+        {% block head %} {% endblock head %}
+        {% block extra_css %} {% endblock extra_css %}
+
+    </head>
+    <body>
+        <div class="container">
+            <div class="header_container">
+                <div class="logo"></div>
+                <div class="header">Wettkampfauswertung
+                    {% if settings_dict.wk_title %}<br><span class="wk_title">{{ settings_dict.wk_title }}</span>{% endif %}
+                </div>
+                <div class="search">
+                    {% if user.is_authenticated %}
+
+                    <form id="athlete_search" method="get" action="{% url 'grading:grade' 0 %}">
+                        <label for="sid_search">Sportler suchen (Startnr.):</label><br>
+                        <input type="number" name="sid_search" id="sid_search" min="1" required>
+                        <input id="sid_search_submit" type="submit" value=">">
+                    </form> 
+
+                    {% endif %}
+
+                </div>
+            </div>
+            <div class="content_container">
+                <div class="menu">
+                    <ul>
+                        <li><a href="{% url 'grading:index' %}">Übersicht</a></li>
+                        {% if user.is_superuser or user.is_staff %}
+                            <li><a href="{% url 'grading:all_results' %}">Ergebnisse</a></li>
+                            <li><a href="{% url 'admin:index' %}">Admin-Seite</a></li>
+                            <li><a href="{% url 'grading:logs' %}">Logs</a></li>
+                            <li><a href="{% url 'grading:judges' %}">Kampfrichter</a></li>
+                            <li><a href="{% url 'grading:database' %}">Datenbanken</a></li>
+                        {% endif %}
+                    </ul>
+                    {% if user.is_authenticated %}
+                        <p>Angemeldet als<br><strong> {{ user.username }}</strong>.</p> 
+                        <form action="{% url 'logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit">Abmelden</button>
+                        </form>
+                    {% else %}
+                        <ul><li><a href="{% url 'login' %}?next={{ request.path }}">Anmelden</a></li></ul>
+                    {% endif %}
+                </div>
+            
+                <div id="error" class="error">{% block error %}{% endblock error %}</div>
+            
+                <div id="success" class="success">{% block success %}{% endblock success %}</div>
+            
+                <div id="content" class="content">{% block content %}{% endblock content %}</div>
+        
+            </div>
+        </div>
+        <script rel="text/javascript" language="javascript">
+            const search_submit = document.getElementById("sid_search_submit");
+            search_submit.addEventListener("click", function(event) {
+                const sid_input = document.getElementById("sid_search");
+                if (!sid_input.value || sid_input.value <= 0) {
+                    alert("Bitte eine gültige Startnummer eingeben.");
+                    event.preventDefault();
+                }
+                else if (document.getElementsByClassName("speichern").length > 0) {
+                    const confirmLeave = confirm("Eventuell sind ungespeicherte Änderungen vorhanden. Möchten Sie die Seite wirklich verlassen? Alle Änderungen gehen verloren.");
+                    if (!confirmLeave) {
+                        event.preventDefault();
+                    }
+                    else {
+                        const sid = parseInt(sid_input.value);
+                        const action_url = "{% url 'grading:grade' 0 %}".replace("/0/", "/" + sid + "/");
+                        document.getElementById("athlete_search").action = action_url;
+                    }
+                }
+                else {
+                    const sid = parseInt(sid_input.value);
+                    const action_url = "{% url 'grading:grade' 0 %}".replace("/0/", "/" + sid + "/");
+                    document.getElementById("athlete_search").action = action_url;
+                }
+            });
+            function initializeHeight() {
+                var height = document.getElementById('content').offsetHeight - (document.getElementById('error').offsetHeight + document.getElementById('success').offsetHeight);
+                if (height < document.getElementById('content').offsetHeight) {
+                    height = height - 32;
+                }
+                document.getElementById('content').setAttribute("style","height:" + height + "px");
+            }
+            window.onload = initializeHeight();
+        </script>
+        {% block extra_js %}{% endblock extra_js %}
+    </body>
+</html>

@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+
+{% block success %}
+    {% if success_message %}
+        <p><strong>{{ success_message }}</strong>
+        {% if backup_file %}
+            <br /><br /><a id="download" href="/grading/download_file?file_name={{backup_file}}" download>Backup-Datei herunterladen (falls nicht schon passiert)</a>
+        {% endif %}
+        </p>
+    {% endif %}
+{% endblock success %}
+
+{% block content %}     
+<h1>Einstellungen</h1>
+    <form method="POST" action="{% url 'grading:change_wk_settings' %}">
+        {% csrf_token %}
+        <h2>Wettkampf</h2>
+        <table>
+            <tr><td><strong>Wettkampftitel:</strong></td><td><input type="text" id="wk_title" name="wk_title" value="{{ wk_title }}"></td></tr>
+            <tr><td><strong>Wettkampfart:</strong></td><td><input type="radio" id="wk_type" name="wk_type" value="einzel"  
+            {% if wk_type == 'einzel' %}checked{% endif %}
+            >Einzel<input style="margin-left:30px;"type="radio" id="wk_type" name="wk_type" value="mannschaft" 
+            {% if wk_type == 'mannschaft' %}checked{% endif %}
+            >Mannschaft</td></tr>
+        </table>
+        <button type="submit">Wettkampf-Änderungen speichern</button>
+    </form>
+    <form method="POST" action="{% url 'grading:change_database_settings' %}">
+        {% csrf_token %}
+        <h2>Datenbank-Konfiguration (Didis Software)</h2>
+        <table>
+            <tr><td>
+                <h3>Datenbank 1</h3>
+                <table>
+                    <tr><td><strong>Datenbank-Name:</strong></td><td><input type="text" id="db1_name" name="db1_name" value="{{ db1_name }}"></td></tr>
+                    <tr><td><strong>Datenbank-Benutzer:</strong></td><td><input type="text" id="db1_user" name="db1_user" value="{{ db1_user }}"></td><tr>
+                    <tr><td><strong>Datenbank-Passwort:</strong></td><td><input type="password" id="db1_password" name="db1_password" value="{{ db1_password }}"></td></tr>
+                    <tr><td><strong>Datenbank-Host:</strong></td><td><input type="text" id="db1_host" name="db1_host" value="{{ db1_host }}"></td></tr>
+                    <tr><td><strong>Datenbank-Port:</strong></td><td><input type="text" id="db1_port" name="db1_port" value="{{ db1_port }}"></td></tr>
+                </table>
+            </td><td>
+                <h3>Datenbank 2</h3>
+                <table>
+                    <tr><td><strong>Datenbank-Name:</strong></td><td><input type="text" id="db2_name" name="db2_name" value="{% if db2_name %}{{ db2_name }}{% endif %}"></td></tr>
+                    <tr><td><strong>Datenbank-Benutzer:</strong></td><td><input type="text" id="db2_user" name="db2_user" value="{% if db2_user %}{{ db2_user }}{% endif %}"></td><tr>
+                    <tr><td><strong>Datenbank-Passwort:</strong></td><td><input type="password" id="db2_password" name="db2_password" value="{% if db2_password %}{{ db2_password }}{% endif %}"></td></tr>
+                    <tr><td><strong>Datenbank-Host:</strong></td><td><input type="text" id="db2_host" name="db2_host" value="{% if db2_host %}{{ db2_host }}{% endif %}"></td></tr>
+                    <tr><td><strong>Datenbank-Port:</strong></td><td><input type="text" id="db2_port" name="db2_port" value="{% if db2_port %}{{ db2_port }}{% endif %}"></td></tr>
+                </table>
+            </td></tr>
+        </table>
+        <button type="submit">Datenbank-Änderungen speichern</button>
+    </form>
+    <h2>Datenbank-Verwaltung</h2>
+    <button><a href="{% url 'grading:database_backup_complete' %}">Datenbank sichern (vollständig)</a></button>
+    <button><a href="{% url 'grading:database_backup' %}">Auswertungsdaten sichern</a></button>
+    <button><a id="restore" href="">Auswertungsdaten wiederherstellen</a></button>
+    <div id="restore_div" class="hidden" style="display:none">
+        <form method="POST" enctype="multipart/form-data" action="{% url 'grading:database_restore' %}">
+            {% csrf_token %}
+            <input type="file" id="restore_file" name="restore_file" accept=".json">
+            <input type="submit" value="Wiederherstellen">
+        </form>
+    </div>
+    <button><a id="delete" href="">Datenbank leeren / Auswertungsdaten zurücksetzen</a></button>
+    <div id="delete_div" class="hidden" style="display:none">
+        <form method="GET" action="{% url 'grading:database_delete' %}">
+            <p>Möchten Sie wirklich alle Daten löschen?</p>
+            <input type="submit" value="Zurücksetzen">
+        </form>
+    </div>
+    <h2>Datenimport</h2>
+    <p><strong>Hinweise zum Import (aus zwei Datenbanken):</strong></p>
+    <ul>
+        <li>Die Datenbanken müssen die gleiche Struktur haben wie die von Didis Software verwendete Datenbank.</li>
+        <li>Die Datenbankverbindungsdaten müssen unter "Datenbank-Konfiguration" eingetragen werden. Werden die Felder der Datenbank 2 nicht ausgefüllt, wird nur eine Datenbank verwendet.</li>
+        <li>Beim Import werden die Daten aus beiden Datenbanken zusammengeführt. Es wird keine der beiden Datenbanken überschrieben oder gelöscht.</li>
+        <li>Die Veranstaltungsdetails werden nur aus der Datenbank 1 übernommen.</li>
+        <li>Die Wettkämpfe und Disziplinen werden zusammengeführt. Bei Wettkämpfen mit der gleichen WettkampfID bzw. Disziplinen mit der gleichen DisziplinID müssen auch alle anderen Daten und die Zuordnung übereinstimmen.</li>
+        <li>Die Startnummern der Teilnehmer müssen eindeutig sein, dürfen also nicht in beiden Datenbanken vorkommen.</li>
+    </ul>
+    <button><a href="{% url 'grading:database_import' %}">Daten von Didis Software importieren</a></button>
+{% endblock content %}
+
+{% block extra_js %}
+    {% if backup_file %}
+        <script>
+            function downloadBackup() {
+                document.getElementById("download").click();
+            }
+            window.onload = downloadBackup;
+        </script>
+    {% endif %}
+    <script>
+        document.getElementById("restore").onclick = function() {
+            var restoreDiv = document.getElementById("restore_div");
+            if (restoreDiv.style.display === "none") {
+                restoreDiv.style.display = "block";
+            } else {
+                restoreDiv.style.display = "none";
+            }
+            return false; // Prevent default link behavior
+        };
+        document.getElementById("delete").onclick = function() {
+            var deleteDiv = document.getElementById("delete_div");
+            if (deleteDiv.style.display === "none") {
+                deleteDiv.style.display = "block";
+            } else {
+                deleteDiv.style.display = "none";
+            }
+            return false; // Prevent default link behavior
+        };
+    </script>
+{% endblock extra_js %}

@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+
+{% block content %}    
+<h1>Log-Einträge</h1>
+{% if logs_list %}
+    <table>
+        <tr><th>Benutzer</th><th>IP</th><th>Sportler</th><th>Wettkampf</th><th>Disziplin</th><th>Beschreibung</th><th>Zeit</th></tr>
+    {% for log in logs_list %}
+         <tr>
+            <td>{{ log.user.username }}</td>
+            <td>{{ log.ip }}</td>
+            {% if log.athlete %}
+                <td>{{ log.athlete.vorname }} {{ log.athlete.nachname }} (Startnr. {{ log.athlete.sid}})</td>
+            {% else %}
+                <td>-</td>
+            {% endif %}
+            {% if log.competition_id %}
+                <td>WK {{ log.competition_id}}</td>
+            {% else %}
+                <td>-</td>
+            {% endif %}
+            {% if log.discipline_id %}
+                <td>{{ log.discipline.bezeichnung}}</td>
+            {% else %}
+                <td>-</td>
+            {% endif %}
+            <td>{{ log.log_text }}</td>
+            <td>{{ log.log_date }}</td></tr>
+    {% endfor %}
+    </table>
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <button><a href="?page=1"><<</a></button>
+                <button><a href="?page={{ page_obj.previous_page_number }}"><</a></button>
+            {% endif %}
+    
+            <span class="current">
+                Seite {{ page_obj.number }} von {{ page_obj.paginator.num_pages }}
+            </span>
+    
+            {% if page_obj.has_next %}
+                <button><a href="?page={{ page_obj.next_page_number }}">></a></button>
+                <button><a href="?page={{ page_obj.paginator.num_pages }}">>></a></button>
+            {% endif %}
+        </span>
+    </div>
+{% else %}
+    <p>Keine Log-Einträge vorhanden.</p>
+{% endif %}
+
+{% endblock content %}

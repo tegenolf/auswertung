@@ -1,0 +1,345 @@
+body {
+    font-family: Helvetica;
+    font-size: 16px;
+    background-color:rgb(102, 102, 102);
+}
+
+div.container {
+    width: 1150px;
+    height:620px;
+    margin:auto;
+    background-color:white;
+    padding:10px;
+    border-radius:10px;
+}
+div.header_container {
+    text-align: center;
+    width: 1150px;
+    height: 90px;
+    margin: auto;
+}
+div.header {
+    float: left;
+    width: 650px;
+    height: 90px;
+    font-size: 35px;
+    line-height: 45px;
+    font-family: Helvetica;
+    font-weight: 500;
+    color: rgb(102, 102, 102);
+    text-align: center;
+}
+div.header .wk_title {
+    font-size: 18px;
+    font-weight: normal;
+    color: rgb(102, 102, 102);
+}
+div.logo {
+    background: white url("../images/logo-turngau-sued-nassau.png") no-repeat;
+    background-size: contain;
+    float: left;
+    width: 250px;
+    height: 90px;
+}
+div.search {
+    float: right;
+    width: 250px;
+    height: 90px;
+}
+div.content_container {
+    margin: auto;
+    width: 1150px;
+    height: 510px;
+}
+div.menu {
+    float: left;
+    width: 150px;
+    height: 510px;
+    border-right: 1px dotted rgb(102, 102, 102);
+}
+div.error {
+    color:red;
+    width: 1000px;
+    min-height: 0px;
+    margin-left: 150px;
+}
+div.error p {
+    margin-left: 5px;
+    text-align: center;
+    border: 1px solid red;
+    padding: 5px;
+    background-color: #ffcccc;
+    border-radius: 3px;
+}
+div.success {
+    color:green;
+    width: 1000px;
+    min-height: 0px;
+    margin-left: 150px;
+}
+div.success p {
+    margin-left: 5px;
+    text-align: center;
+    border: 1px solid green;
+    padding: 5px;
+    background-color: #ccffcc;
+    border-radius: 3px;
+}
+div.content {
+    width: 990px;
+    height: 510px;
+    float: right;
+    padding-left: 5px;
+    overflow-y: auto;
+}
+div.content table {
+    margin-left: 10px;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+div.content table, div.content th, div.content td {
+    border: 1px dashed rgb(102, 102, 102);
+    padding: 5px;
+}
+
+div.menu ul {
+    padding: 0.5em 1em 0.5em 2.3em;
+    position: relative;
+}
+
+div.menu ul li {
+    list-style-type: none;
+    line-height: 1.5;
+    padding: 0.5em 0;
+}
+
+div.menu ul li:before {
+    font-family: FontAwesome;
+    content: "\f138";
+    position: absolute;
+    left: 1em;
+    color: black;
+}
+
+div.menu p {
+    padding: 0.5em 1em 0.5em 1em;
+    margin: 0px;
+    margin-top: 1em;
+    position: relative;
+    line-height: 1.5;
+}
+
+div.menu form {
+    padding: 0.5em 1em 0.5em 1em;
+    position: relative;
+    line-height: 1.5;
+}
+
+#athlete_search {
+    padding-top:1em;
+}
+
+#athlete_search label {
+    display: block;
+    margin-bottom: 0px;
+}
+
+div.menu form input[type="number"], #athlete_search input[type="number"] {
+    width: 75px;
+    font-size: 16px;
+} 
+
+div.menu form input[type=submit], #athlete_search input[type=submit] {
+    font-size: 16px;
+    background-color: rgb(102, 102, 102);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+div.pagination{
+    width: 100%;
+    margin: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    text-align: center;
+}
+div.pagination button{
+    margin: 0px 5px;
+    padding: 5px 10px;
+}
+
+a {
+    text-decoration: none;
+    color: black;
+}
+
+a:hover {
+    text-decoration: underline;
+    color: blue;
+}
+
+h1 {
+    font-size: 24px;
+    font-weight: 500;
+    color: rgb(102, 102, 102);
+    margin-bottom: 0px;
+    margin-left: 5px;
+}
+
+h2 {
+    font-size: 20px;
+    font-weight: 500;
+    color: rgb(102, 102, 102);
+}
+
+div.content p {
+    margin-left: 10px;
+}
+
+form.grade input, form.grade label {
+    display:flex;
+    flex-direction: column;
+}
+
+form.grade table input {
+    padding-top:10px;
+    width: 80%;
+    font-size:16px;
+}
+
+form.grade table {
+    width: 100%;
+}
+
+form.grade table tr {
+    padding-bottom: 20px;
+}
+
+form.grade table tr.abzuege td{
+    border-bottom: 1px solid rgb(102, 102, 102);
+}
+
+form.grade table td {
+    padding: 20px 5px;
+    width: 25%;
+}
+
+form.grade table caption {
+    text-align: left;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+form.grade input[type="text"] {
+    background-color: lightgray;
+}
+
+form.grade input[type=submit], button.grade{
+    margin-top: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: rgb(102, 102, 102);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button {
+    font-size: 16px;
+    background-color: rgb(102, 102, 102);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    padding: 5px 10px;
+}
+
+div.content button {
+    margin-top: 10px;
+}
+
+button a {
+    text-decoration: none;
+    color: white;
+}
+
+button a:hover {
+    text-decoration: none;
+    color: white;
+}
+
+em.rotated {
+    -ms-writing-mode: tb-rl; 
+    writing-mode: vertical-rl; 
+    transform:rotate(180deg);
+}
+
+div.hidden {
+    position: relative;
+    display: inline-block;
+    background-color:rgb(102, 102, 102);
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
+    padding: 10px;
+    margin: auto;
+    margin-top: 10px;
+}
+
+div.tabs {
+    display: flex;
+    /*border-bottom: 1px solid rgb(102, 102, 102);*/
+    margin-top: 10px;
+    width: 100%;
+    overflow-x:auto;
+}
+
+div.tabs a.tab {
+    padding: 10px 20px;
+    text-decoration: none;
+    color: #fff;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-right: 5px;
+    background-color: rgb(102, 102, 102);
+    border-radius: 5px 5px 0 0;
+    min-width: 50px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+div.tabs a.tab.active {
+    background-color: white;
+    color: rgb(102, 102, 102);
+    border-width: 2px;
+    border-color: rgb(102, 102, 102) rgb(102, 102, 102) white;
+    border-bottom: none;
+    cursor: default;
+}
+
+div#tabs-content {
+    border: 2px solid rgb(102, 102, 102);
+    border-top: none;
+    padding: 10px;
+    border-radius: 0 5px 5px 5px;
+    margin-top: -1px;
+}
+
+div#ranking-list-container {
+    margin-left: 10px;
+    height:340px;
+    max-height:340px;
+    overflow-y:auto;
+}
+
+.small {
+    font-size: 12px;
+    color: rgb(102, 102, 102);
+}

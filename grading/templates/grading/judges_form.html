@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+
+{% block content %}    
+<h1>Kampfrichter / Benutzer</h1>
+{% if judges_dict %}
+    <form method="POST" action="{% url 'grading:save_judges' %}">
+        {% csrf_token %}
+        <table>
+            <caption>Wählen Sie die Wettkämpfe/Disziplinen aus, die den Kampfrichtern zugewiesen werden sollen.</caption>
+            <tr>
+                <th></th>
+                {% for key in judges_dict.keys %}
+                    <th><em class="rotated">{{ key }}</em></th>
+                {% endfor %}
+            </tr>
+            {% if comp_dis_dict %}
+            {% for comp_key, comp_dis_list in comp_dis_dict.items %}
+                <tr>
+                    <td colspan="{{ judges_dict|length|add:'1' }}"><strong>WK {{ comp_key }}</strong></td>
+                </tr>
+                {% for comp_dis in comp_dis_list %}
+                    <tr>
+                        <td>{{ comp_dis.discipline.bezeichnung }}</td>
+                        {% for judge_key in judges_dict.keys %}
+                            <td style="text-align: center;">
+                                <input type="checkbox" name="{{ comp_dis.id|stringformat:"s"|add:"_"|add:judge_key }}" value="1"
+                                {% if comp_dis.id|stringformat:"s"|add:"_"|add:judge_key in permission_list %}
+                                        checked
+                                {% endif %}
+                                >
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+            {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="{{ judges_dict|length|add:'1' }}">Keine Wettkämpfe/Disziplinen angelegt.</td>
+                </tr>
+            {% endif %}
+        </table>
+        <button type="submit">Speichern</button>
+    </form>
+{% else %}
+    <p>Keine Benutzer außer den Administratoren angelegt.</p>
+{% endif %}
+
+{% endblock content %}
