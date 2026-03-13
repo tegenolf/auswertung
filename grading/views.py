@@ -819,6 +819,7 @@ def database_import(request):
             # Wettbewerbe importieren
             c.execute("SELECT WettkampfID, Wettkampfname FROM wettkämpfe")
             db12_competitions = []
+            db1_competitions = list(Competition.objects.values_list('cid', flat=True))
             for row in c.fetchall():
                 # Überprüfen, ob Wettkampf bereits existiert und ggf. vergleichen, um Duplikate zu vermeiden
                 existing_competition = Competition.objects.filter(cid=row[0]).first()
@@ -835,7 +836,6 @@ def database_import(request):
                 else:
                     competition = Competition(cid=row[0], name=row[1])
                     competition.save()
-            db1_competitions = list(Competition.objects.values_list('cid', flat=True))
         except:
             context = read_settings_xml()
             context['error_message'] = "Beim Importieren der Wettkämpfe aus Datenbank 2 ist ein Fehler aufgetreten."

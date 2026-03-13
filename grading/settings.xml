@@ -3,16 +3,16 @@
     <wk_type>einzel</wk_type>
     <database1>
         <name>gt_einzel_m2026</name>
-        <user>remoteuser</user>
-        <password>tgsn1862</password>
-        <host>192.168.220.136</host>
+        <user>root</user>
+        <password>mysql_pwdGSI</password>
+        <host>localhost</host>
         <port>3306</port>
     </database1>
     <database2>
-        <name />
-        <user />
-        <password />
-        <host />
-        <port />
+        <name>gt_einzel_tgmt_m2026</name>
+        <user>root</user>
+        <password>mysql_pwdGSI</password>
+        <host>localhost</host>
+        <port>3306</port>
     </database2>
 </settings>
