@@ -1,6 +1,6 @@
 from django.db.models import F, Sum
 from django.http import HttpResponseRedirect, HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.views import generic
 from django.utils import timezone
@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.http import Http404
 
 from .models import *
 
@@ -98,9 +99,6 @@ class DetailView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     template_name = "grading/athlete.html"
 
     def get_queryset(self):
-        """
-        Excludes any questions that aren't published yet.
-        """
         return Athlete.objects
 
     def get_context_data(self, **kwargs):
@@ -133,10 +131,23 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     model = Athlete
     template_name = "grading/grade.html"
 
+    #def get(self, request, *args, **kwargs):
+    #    try:
+    #        return super(GradeView, self).get(request, *args, **kwargs)
+    #    except Http404:
+    #        return render(
+    #            request,
+    #            "grading/index.html",
+    #            {
+    #                "error_message": "Kein Sportler mit dieser Startnummer vorhanden.",
+    #            },
+    #        )
+        
+    #def get_object(self, queryset=None):
+    #    print("Test")
+    #    return get_object_or_404(Athlete, **self.kwargs)
+        
     def get_queryset(self):
-        """
-        Excludes any questions that aren't published yet.
-        """
         return Athlete.objects
     
     def get_context_data(self, **kwargs):
@@ -158,8 +169,45 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
         discipline = Discipline.objects.get(did=did)
         context['discipline'] = discipline
         initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
+        
+        # Auf Änderungen in Didis Datenbank checken
+        settings_dict = read_settings_xml()
+        try:
+            # Datenbankverbindung basierend auf dbid herstellen
+            if self.object.dbid == 1:
+                db = MySQLdb.connect(host=settings_dict['db1_host'], user=settings_dict['db1_user'], passwd=settings_dict['db1_password'], db=settings_dict['db1_name'], port=int(settings_dict['db1_port']))
+            elif self.object.dbid == 2:
+                db = MySQLdb.connect(host=settings_dict['db2_host'], user=settings_dict['db2_user'], passwd=settings_dict['db2_password'], db=settings_dict['db2_name'], port=int(settings_dict['db2_port']))        
+            cursor = db.cursor()
+            cursor.execute("SELECT Punktzahl FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s", (self.object.sid,did))
+            didi_grading = cursor.fetchone()
+            db.commit()
+            cursor.close()
+            if didi_grading is not None:
+                if initial_grading is not None:
+                    if didi_grading[0] != initial_grading.score:
+                        initial_grading.score = didi_grading[0]
+                        initial_grading.kari1 = 0
+                        initial_grading.kari2 = 0
+                        initial_grading.kari3 = 0
+                        initial_grading.kari4 = 0
+                        initial_grading.kari5 = 0
+                        initial_grading.awert = -1*initial_grading.score
+                        initial_grading.ewert = 0
+                        initial_grading.dwert = 0
+                        initial_grading.save()
+                        initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
+                        context['error_message'] = "Die gespeicherte Wertung stimmte nicht mit der Wertung in Didis Datenbank überein. Sie wurde aktualisiert."
+                else:
+                    grading = Grading(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, score=didi_grading[0], kari1=0, kari2=0, kari3=0, kari4=0, kari5=0, awert=-1*didi_grading[0], ewert=0, dwert=0)
+                    grading.save()
+                    initial_grading = grading
+                    context['error_message'] = "In Didis Datenbank war bereits eine Wertung gespeichert. Sie wurde nun übernommen."
+        except MySQLdb.Error:
+            pass
+
         context['initial_grading'] = initial_grading
-        context['settings_dict'] = read_settings_xml()
+        context['settings_dict'] = settings_dict
         context['not_changeable'] = False
         return context
     
