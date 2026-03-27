@@ -198,7 +198,7 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
                         initial_grading.save()
                         initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
                         context['error_message'] = "Die gespeicherte Wertung stimmte nicht mit der Wertung in Didis Datenbank überein. Sie wurde aktualisiert."
-                else:
+                elif didi_grading[0] != 0:
                     grading = Grading(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, score=didi_grading[0], kari1=0, kari2=0, kari3=0, kari4=0, kari5=0, awert=-1*didi_grading[0], ewert=0, dwert=0)
                     grading.save()
                     initial_grading = grading
@@ -448,7 +448,7 @@ def save_grade(request, athlete_id):
         # Gesamtpunktzahl in Athlete_Comp aktualisieren
         athlete_comp = Athlete_Comp.objects.get(athlete_id=athlete_id, competition_id=request.POST["cid"])
         totalscore = Grading.objects.filter(athlete_id=athlete_id, competition_id=request.POST["cid"]).aggregate(Sum('score'))['score__sum']
-        athlete_comp.score = totalscore
+        athlete_comp.score = round(totalscore,3)
         athlete_comp.save()
 
         # Ranking aktualisieren
@@ -479,8 +479,8 @@ def save_grade(request, athlete_id):
             # Update Punktzahl
             cursor.execute("UPDATE ergebnisse SET Leistung=%s, Punktzahl=%s WHERE Startnummer=%s AND DisziplinID=%s", (grading.score, grading.score, athlete_id, request.POST["did"]))
             db.commit()
-            affectec_rows = cursor.rowcount
-            if affectec_rows is None or affectec_rows == 0:
+            affected_rows = cursor.rowcount
+            if affected_rows is None or affected_rows == 0:
                 cursor.execute("INSERT INTO ergebnisse(Leistung,Punktzahl,Startnummer,DisziplinID) VALUES(%s,%s,%s,%s)",(grading.score, grading.score, athlete_id, request.POST["did"]))
             # Update Gesamtpunktzahl
             cursor.execute("UPDATE teilnehmer SET Gesamtpunktzahl=%s WHERE Startnummer=%s", (totalscore, athlete_id))
@@ -1049,3 +1049,58 @@ def download_file(request):
             response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
             return response
     return HttpResponseRedirect(reverse("grading:database"))
+
+## Die Funktion database_clean_duplicates bereinigt die Ergebnisse-Tabelle in Didis Datenbank
+# von Duplikaten, die dort ungewünschter Weise hineingeschrieben werden ##
+@login_required
+def database_clean_duplicates(request):
+    user = request.user
+    if not (user.is_superuser or user.is_staff):
+        return HttpResponseRedirect(reverse("grading:database"))
+    settings_dict = read_settings_xml()
+    if settings_dict['db2_host'] is None:
+        length = 2
+    else:
+        length = 3
+
+    for i in range(1,length):
+        try:
+            # Datenbankverbindung herstellen
+            if i==1:
+                db = MySQLdb.connect(host=settings_dict['db1_host'], port=int(settings_dict['db1_port']), user=settings_dict['db1_user'], passwd=settings_dict['db1_password'], db=settings_dict['db1_name'])
+            else:
+                db = MySQLdb.connect(host=settings_dict['db2_host'], port=int(settings_dict['db2_port']), user=settings_dict['db2_user'], passwd=settings_dict['db2_password'], db=settings_dict['db2_name'])
+            c = db.cursor()
+        except:
+            context = read_settings_xml()
+            context['error_message'] = "Fehler beim Verbinden mit Datenbank "+ str(i) + ". Bitte überprüfen Sie die Einstellungen."
+            return render(
+                request,
+                "grading/database.html",
+                context,
+            )
+        try:
+            # Ergebnisse laden
+            c.execute("SELECT DISTINCT * FROM ergebnisse")
+            results = c.fetchall()
+            c.execute("DELETE FROM ergebnisse")
+            db.commit()
+            for row in results:
+                c.execute("INSERT INTO ergebnisse(Startnummer,DisziplinID,Leistung,Punktzahl,Gerätezahl,Runde,Gesperrt) VALUES(%s,%s,%s,%s,%s,%s,%s)",(row[0],row[1],row[2],row[3],row[4],row[5],row[6]))
+            db.commit()
+            c.close()
+        except:
+            context = read_settings_xml()
+            context['error_message'] = "Beim Löschen der Duplikate aus Datenbank " + str(i) + " ist ein Fehler aufgetreten."
+            return render(
+                request,
+                "grading/database.html",
+                context,
+            )
+    context = read_settings_xml()
+    context['success_message'] = "Löschen der Duplikate erfolgreich."
+    return render(
+        request,
+        "grading/database.html",
+        context,
+    )

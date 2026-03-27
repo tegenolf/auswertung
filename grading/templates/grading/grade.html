@@ -118,9 +118,9 @@
                 ewert = 10 - (karis.reduce((a, b) => a + b, 0) / 2);
             }
             else if (number == 3){
-                // Alle drei Werte mitteln und das Ergebnis in der zweiten Nachkommastelle auf 0 bzw. 5 runden
+                // Alle drei Werte mitteln und das Ergebnis in der ersten Nachkommastelle runden
                 const average = karis.reduce((a, b) => a + b, 0) / 3;
-                ewert = 10 - (Math.floor(average * 20) / 20);
+                ewert = 10 - (Math.floor(average * 10) / 10);
                 //const mittel = Math.floor(10 * karis.slice(1,5).reduce((a, b) => a + b, 0) / 2) / 10;
                 //ewert = 10 - ((karis[0] + mittel) / 2);
             }

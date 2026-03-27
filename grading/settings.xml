@@ -1,18 +1,18 @@
 <settings>
-    <wk_title>Gau-Einzel-Finals Ger&#228;tturnen m&#228;nnlich 2026</wk_title>
+    <wk_title>Ger&#228;tturnen-Einzelmeisterschaften weiblich 2026</wk_title>
     <wk_type>einzel</wk_type>
     <database1>
-        <name>gt_einzel_m2026</name>
+        <name>gt_einzel_w2026</name>
         <user>root</user>
-        <password>mysql_pwdGSI</password>
+        <password>tgsn1862</password>
         <host>localhost</host>
         <port>3306</port>
     </database1>
     <database2>
-        <name>gt_einzel_tgmt_m2026</name>
-        <user>root</user>
-        <password>mysql_pwdGSI</password>
-        <host>localhost</host>
-        <port>3306</port>
+        <name />
+        <user />
+        <password />
+        <host />
+        <port />
     </database2>
 </settings>

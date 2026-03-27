@@ -9,7 +9,7 @@
         <table class="no_border">
             <tr><th>Rang</th><th>SportlerIn</th><th>Punktzahl</th></tr>
             {% for ranking in ranking_list %}
-                 <tr><td>{{ ranking.ranking}}</td><td>{{ ranking.athlete.vorname }} {{ ranking.athlete.nachname }}<br />&nbsp;&nbsp;<span class="small">({{ ranking.athlete.geburtsjahr }} - {{ ranking.athlete.verein }})</span>
+                 <tr><td>{{ ranking.ranking}}</td><td>{{ ranking.athlete.vorname }} {{ ranking.athlete.nachname }} (Startnr. {{ ranking.athlete.sid }})<br />&nbsp;&nbsp;<span class="small">({{ ranking.athlete.geburtsjahr }} - {{ ranking.athlete.verein }})</span>
                     <br />&nbsp;&nbsp;<span class="small">
                         {% for dis in ranking.disciplines %}{{ dis.discipline.bezeichnung }}: {{dis.score}}{% if not forloop.last %}, {% endif %}{% endfor %}
                     </span></td><td>{{ ranking.score }}</td></tr>

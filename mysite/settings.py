@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-0ji#vqad#m-mrw=@_+tk(e1e@o(lz3_y1vgxjmwqrw)1@k(pf4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.2.185', 'localhost', '127.0.0.1', '192.168.2.195', '192.168.2.190','192.168.178.57','192.168.220.138']
+ALLOWED_HOSTS = ['192.168.2.185', 'localhost', '127.0.0.1', '192.168.2.195', '192.168.2.190','192.168.178.57','192.168.220.138','192.168.220.136']
 
 
 # Application definition
@@ -79,13 +79,20 @@ DATABASES = {
     #'default': {
     #    'ENGINE': 'django.db.backends.sqlite3',
     #    'NAME': BASE_DIR / 'db.sqlite3',
+    #
+    #    'ENGINE': 'django.db.backends.mysql',
+    #    'NAME': 'django',
+    #    'USER': 'root',
+    #    'PASSWORD': 'mysql_pwdGSI',
+    #    'HOST': 'localhost',
+    #    'PORT': '3306',
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'django',
         'USER': 'root',
-        'PASSWORD': 'mysql_pwdGSI',
+        'PASSWORD': 'tgsn1862',
         'HOST': 'localhost',
-        'PORT': '3306',
+        'PORT': '3308',
     }
 }
 
@@ -127,7 +134,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'grading/static/'
+STATIC_URL = '/grading/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

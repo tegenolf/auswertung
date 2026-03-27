@@ -15,7 +15,7 @@
         <link rel="stylesheet" href="{% static "grading/css/style.css" %}">
 
         <script src="{% static "grading/js/hyperscript.min.js" %}"></script>
-        {% htmx_script %}
+        <script src="{% static "django_htmx/htmx.min.js" %}" defer></script><script src="{% static "django_htmx/django-htmx.js" %}" data-debug="True" defer></script>
 
         {% block head %} {% endblock head %}
         {% block extra_css %} {% endblock extra_css %}

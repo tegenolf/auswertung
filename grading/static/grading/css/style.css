@@ -136,7 +136,7 @@ div.menu form {
 }
 
 #athlete_search {
-    padding-top:1em;
+    padding-top:5px;
 }
 
 #athlete_search label {
@@ -147,6 +147,7 @@ div.menu form {
 div.menu form input[type="number"], #athlete_search input[type="number"] {
     width: 75px;
     font-size: 16px;
+    height: 30px;
 } 
 
 div.menu form input[type=submit], #athlete_search input[type=submit] {

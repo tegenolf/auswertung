@@ -45,5 +45,7 @@ urlpatterns = [
     path("database_import/", views.database_import, name="database_import"),
     # ex: /grading/download_file/ -> Funktion zum Herunterladen einer Datei (z.B. Datenbanksicherung oder Exportdatei)
     path("download_file/", views.download_file, name="download_file"),
+    # ex: /grading/database_clean_duplicates/ -> Funktion zum Bereinigen der Datenbank von Duplikaten
+    path("clean_duplicates/", views.database_clean_duplicates, name="database_clean_duplicates"),
 
 ]
