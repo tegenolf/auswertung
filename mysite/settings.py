@@ -15,130 +15,134 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+local_settings_file = BASE_DIR.parent / 'settings_local.py'
+if local_settings_file.exists():
+    with open(local_settings_file) as f:
+        exec(f.read())
+else:
+    # Quick-start development settings - unsuitable for production
+    # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+    # SECURITY WARNING: keep the secret key used in production secret!
+    SECRET_KEY = 'django-insecure-0ji#vqad#m-mrw=@_+tk(e1e@o(lz3_y1vgxjmwqrw)1@k(pf4'
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-0ji#vqad#m-mrw=@_+tk(e1e@o(lz3_y1vgxjmwqrw)1@k(pf4'
+    # SECURITY WARNING: don't run with debug turned on in production!
+    DEBUG = True
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['192.168.2.185', 'localhost', '127.0.0.1', '192.168.2.195', '192.168.2.190','192.168.178.57','192.168.220.138','192.168.220.136']
+    ALLOWED_HOSTS = ['192.168.2.185', 'localhost', '127.0.0.1', '192.168.2.195', '192.168.2.190','192.168.178.57','192.168.220.138','192.168.220.136']
 
 
-# Application definition
+    # Application definition
 
-INSTALLED_APPS = [
-    'grading.apps.GradingConfig',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django_htmx',
-]
+    INSTALLED_APPS = [
+        'grading.apps.GradingConfig',
+        'django.contrib.admin',
+        'django.contrib.auth',
+        'django.contrib.contenttypes',
+        'django.contrib.sessions',
+        'django.contrib.messages',
+        'django.contrib.staticfiles',
+        'django_htmx',
+    ]
 
-MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django_htmx.middleware.HtmxMiddleware',
-]
+    MIDDLEWARE = [
+        'django.middleware.security.SecurityMiddleware',
+        'django.contrib.sessions.middleware.SessionMiddleware',
+        'django.middleware.common.CommonMiddleware',
+        'django.middleware.csrf.CsrfViewMiddleware',
+        'django.contrib.auth.middleware.AuthenticationMiddleware',
+        'django.contrib.messages.middleware.MessageMiddleware',
+        'django.middleware.clickjacking.XFrameOptionsMiddleware',
+        'django_htmx.middleware.HtmxMiddleware',
+    ]
 
-ROOT_URLCONF = 'mysite.urls'
+    ROOT_URLCONF = 'mysite.urls'
 
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
+    TEMPLATES = [
+        {
+            'BACKEND': 'django.template.backends.django.DjangoTemplates',
+            'DIRS': [],
+            'APP_DIRS': True,
+            'OPTIONS': {
+                'context_processors': [
+                    'django.template.context_processors.request',
+                    'django.contrib.auth.context_processors.auth',
+                    'django.contrib.messages.context_processors.messages',
+                ],
+            },
         },
-    },
-]
+    ]
 
-WSGI_APPLICATION = 'mysite.wsgi.application'
+    WSGI_APPLICATION = 'mysite.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+    # Database
+    # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    #'default': {
-    #    'ENGINE': 'django.db.backends.sqlite3',
-    #    'NAME': BASE_DIR / 'db.sqlite3',
-    #
-    #    'ENGINE': 'django.db.backends.mysql',
-    #    'NAME': 'django',
-    #    'USER': 'root',
-    #    'PASSWORD': 'mysql_pwdGSI',
-    #    'HOST': 'localhost',
-    #    'PORT': '3306',
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'django',
-        'USER': 'root',
-        'PASSWORD': 'tgsn1862',
-        'HOST': 'localhost',
-        'PORT': '3308',
+    DATABASES = {
+        #'default': {
+        #    'ENGINE': 'django.db.backends.sqlite3',
+        #    'NAME': BASE_DIR / 'db.sqlite3',
+        #
+        #    'ENGINE': 'django.db.backends.mysql',
+        #    'NAME': 'django',
+        #    'USER': 'root',
+        #    'PASSWORD': 'mysql_pwdGSI',
+        #    'HOST': 'localhost',
+        #    'PORT': '3306',
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'django',
+            'USER': 'root',
+            'PASSWORD': 'tgsn1862',
+            'HOST': 'localhost',
+            'PORT': '3308',
+        }
     }
-}
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+    # Password validation
+    # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        "OPTIONS": {
-            "min_length": 6,
+    AUTH_PASSWORD_VALIDATORS = [
+        {
+            'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
         },
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
+        {
+            'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+            "OPTIONS": {
+                "min_length": 6,
+            },
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        },
+        {
+            'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        },
+    ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
+    # Internationalization
+    # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'de-de'
+    LANGUAGE_CODE = 'de-de'
 
-TIME_ZONE = 'Europe/Berlin'
+    TIME_ZONE = 'Europe/Berlin'
 
-USE_I18N = True
+    USE_I18N = True
 
-USE_TZ = True
+    USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+    # Static files (CSS, JavaScript, Images)
+    # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = '/grading/static/'
+    STATIC_URL = '/grading/static/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+    # Default primary key field type
+    # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+    DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGOUT_REDIRECT_URL = '/accounts/login/?next=/grading/'
+    LOGOUT_REDIRECT_URL = '/accounts/login/?next=/grading/'

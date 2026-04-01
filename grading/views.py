@@ -31,7 +31,9 @@ def get_client_ip(request):
 
 ## Funktion zum Aktualisieren der Einstellungen in der settings.xml ##
 def update_settings_xml(setting_dict, parent_element='root'):
-    filename = os.path.join(os.path.dirname(__file__), 'settings.xml')
+    filename = os.path.join(os.path.dirname(__file__), '../../settings_local.xml')
+    if not os.path.exists(filename):
+        filename = os.path.join(os.path.dirname(__file__), 'settings.xml')
     tree = ET.parse(filename)
     root = tree.getroot()
     if parent_element != 'root':
@@ -48,7 +50,9 @@ def update_settings_xml(setting_dict, parent_element='root'):
 ## Funktion zum Einlesen der Einstellungen aus der settings.xml und Rückgabe als Dictionary ##
 def read_settings_xml():
     settings_dict = {}
-    filename = os.path.join(os.path.dirname(__file__), 'settings.xml')
+    filename = os.path.join(os.path.dirname(__file__), '../../settings_local.xml')
+    if not os.path.exists(filename):
+        filename = os.path.join(os.path.dirname(__file__), 'settings.xml')
     tree = ET.parse(filename)
     root = tree.getroot()
     for child in root:
