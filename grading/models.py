@@ -17,6 +17,7 @@ class Athlete(models.Model):
     geburtsjahr = models.IntegerField()
     verein = models.CharField(max_length=100)
     dbid = models.IntegerField(null=True, blank=True)
+    riege = models.IntegerField(null=True, blank=True) # optionales Feld für die Riege des Athleten
 
     def __str__(self):
         return f"{self.vorname} {self.nachname} ({self.geburtsjahr}), {self.verein}"
@@ -49,10 +50,12 @@ class Discipline(models.Model):
 
 ## Competition:
 # cid - Wettkampf-ID (integer, unique),
-# name - String (z.B. "Landesmeisterschaft 2024", "Vereinswettkampf 2024", etc.)    
+# name - String (z.B. "Landesmeisterschaft 2024", "Vereinswettkampf 2024", etc.)
+# vier_aus_sechs - Boolean (Einstellung, ob die 4 aus 6 Regel angewendet werden soll, d.h. ob bei der Bewertung nur die 4 besten Geräte-Wertungen gezählt werden sollen)    
 class Competition(models.Model):
     cid = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=100)
+    vier_aus_sechs = models.BooleanField(default=False) # Einstellung, ob die 4 aus 6 Regel angewendet werden soll
 
     def __str__(self):
         return f"{self.name}"

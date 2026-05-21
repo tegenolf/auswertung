@@ -7,6 +7,8 @@ urlpatterns = [
     ### Seiten: ###
     # ex: /grading/ -> Übersicht aller Athleten
     path("", views.IndexView.as_view(), name="index"),
+    # ex: /grading/riegen/ -> Seite zum Anzeigen aller Athleten sortiert nach Riegen
+    path("riegen/", views.RiegenView.as_view(), name="riegen"),
     # ex:  /grading/5/ -> Detailansicht eines Athleten mit id=5
     path("<int:pk>/", views.DetailView.as_view(), name="detail"),
     # ex:  /grading/5/results/ -> Ergebnisse eines Athleten mit id=5

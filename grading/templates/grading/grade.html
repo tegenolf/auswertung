@@ -80,11 +80,13 @@
         <input id="submit" type="submit" value="Speichern" class="speichern">
         </form>
         {% endif %}
+        <button id="back" class="nav"{% if not previous %} disabled {% endif %}><<</button>
+        <button id="list" class="nav">Zur Riegenliste</button>
+        <button id="next" class="nav"{% if not next %} disabled {% endif %}>>></button>
 {% endblock content %}
 
 {% block extra_js %}
     {% if not_changeable %}
-    {{not_changeable}}
     <script rel="text/javascript" language="javascript">
         
         function redirectToEdit() {
@@ -95,8 +97,37 @@
             const final_url = edit_url.replace("/0/", "/" + athlete_id + "/");
             window.location.href = final_url;
         }
+        function backToList() {
+            // Redirect to the list page
+            const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.riege }}";
+            window.location.href = listUrl;
+        }
+        {% if previous %}
+        function backToPreviousAthlete() {
+            // Redirect to the last athelete's page
+            const previousAthleteUrl = "{% url 'grading:grade' previous.sid %}";
+            window.location.href = previousAthleteUrl;
+        }
+        {% endif %}
+        {% if next %}
+        function toNextAthlete() {
+            // Redirect to the next athelete's page
+            const nextAthleteUrl = "{% url 'grading:grade' next.sid %}";
+            window.location.href = nextAthleteUrl;
+        }
+        {% endif %}
         const redirectButton = document.getElementById("submit");
         redirectButton.addEventListener("click", redirectToEdit);
+        {% if previous %}
+        const backButton = document.getElementById("back");
+        backButton,addEventListener("click",backToPreviousAthlete);
+        {% endif %}
+        {% if next %}
+        const nextButton = document.getElementById("next");
+        nextButton.addEventListener("click",toNextAthlete);
+        {% endif %}
+        const listButton = document.getElementById("list");
+        listButton.addEventListener("click",backToList);
     </script>
     {% else %}
     <script rel="text/javascript" language="javascript">
@@ -140,8 +171,6 @@
             document.getElementById("score").value = score.toFixed(3);
         }
         function fillEmptyFields() {
-            updateScore();
-
             const kari1Element = document.getElementById("kari1");
             if (!kari1Element.value) {
                 kari1Element.value = "0";
@@ -185,6 +214,44 @@
                 input_field.defaultValue = input_field.defaultValue.replace(',', '.');
                 input_field.value = input_field.defaultValue;});
         }
+        function deactivateSubmitButton() {
+            const submitButton = document.getElementById("submit");
+            submitButton.disabled = true;
+        }
+        function beforeSubmit() {
+            deactivateSubmitButton();
+            updateScore();
+            fillEmptyFields();
+        }
+        function warnBeforeLeaving() {
+            const confirmLeave = confirm("Eventuell sind ungespeicherte Änderungen vorhanden. Möchten Sie die Seite wirklich verlassen? Alle Änderungen gehen verloren.");
+            return confirmLeave;
+        }
+        function backToList() {
+            if (warnBeforeLeaving()) {
+                // Redirect to the list page
+                const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.riege }}";
+                window.location.href = listUrl;
+            }
+        }
+        {% if previous %}
+        function backToPreviousAthlete() {
+            if (warnBeforeLeaving()) {
+                // Redirect to the previous athelete's page
+                const previousAthleteUrl = "{% url 'grading:grade' previous.sid %}";
+                window.location.href = previousAthleteUrl;
+            }
+        }
+        {% endif %}
+        {% if next %}
+        function toNextAthlete() {
+            if (warnBeforeLeaving()) {
+                // Redirect to the next athelete's page
+                const nextAthleteUrl = "{% url 'grading:grade' next.sid %}";
+                window.location.href = nextAthleteUrl;
+            }
+        }
+        {% endif %}
         window.onload = initialize();
         const kari1Element = document.getElementById("kari1");
         kari1Element.addEventListener("change",updateScore);
@@ -202,6 +269,16 @@
         awertElement.addEventListener("change",updateScore);
         const submitButton = document.getElementById("submit");
         submitButton.addEventListener("click", fillEmptyFields);
+        {% if previous %}
+        const backButton2 = document.getElementById("back");
+        backButton2.addEventListener("click",backToPreviousAthlete);
+        {% endif %}
+        {% if next %}  
+        const nextButton2 = document.getElementById("next");
+        nextButton2.addEventListener("click",toNextAthlete);
+        {% endif %}
+        const listButton2 = document.getElementById("list");
+        listButton2.addEventListener("click",backToList);
     </script>
     {% endif %}
 {% endblock extra_js %}

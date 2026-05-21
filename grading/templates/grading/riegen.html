@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>Riegen</h1>
+    <!-- Riegen-Tabs-->
+    {% if riegen %}
+        <div class="tabs" id="riegen-tabs" hx-target="#tabs-content" hx-swap="innerHTML" _="on htmx:afterOnLoad take .active for event.target">
+            {% for riege in riegen %}
+                <a hx-get="{% url 'grading:riegen' %}?riege={{ riege }}" id ="{{ riege }}" class="tab {% if riege == selected_riege %}active{% endif %}">Riege {{ riege }}</a>
+            {% endfor %}
+        </div>
+        <div id="tabs-content">
+            {% include 'grading/riegen_entry.html' %}
+        </div>
+    {% endif %}
+    
+{% endblock content %}
+
+{% block extra_js %}
+    <script rel="text/javascript" language="javascript">
+        window.onload = function() {
+            const activeTab = document.querySelector("#riegen-tabs .active");
+            if (activeTab==null) {
+                const firstTab = document.getElementById("{{ selected_riege }}");
+                if (firstTab) {
+                    firstTab.click();
+                }
+            }
+        };
+        // Nach 10 Sekunden den Tab neu laden, um die Ergebnisse zu aktualisieren
+        setInterval(function() {
+            const activeTab = document.querySelector("#riegen-tabs .active");
+            if (activeTab) {
+                activeTab.click();
+            }
+        }, 10000);
+    </script>
+{% endblock extra_js %}

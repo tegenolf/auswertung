@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Ergebnisse</h1>
+    <h1>Ergebnisse </h1>
     <!-- Competition-Tabs-->
     {% if competitions %}
         <div class="tabs" id="competition-tabs" hx-target="#tabs-content" hx-swap="innerHTML" _="on htmx:afterOnLoad take .active for event.target">
             {% for comp in competitions %}
-                <a hx-get="{% url 'grading:all_results' %}?cid={{ comp.cid }}" class="tab {% if comp.cid == selected_competition_id %}active{% endif %}">WK {{ comp.cid }}</a>
+                <a hx-get="{% url 'grading:all_results' %}?cid={{ comp.cid }}" id ="{{ comp.cid }}" class="tab {% if comp.cid == selected_competition_id %}active{% endif %}">WK {{ comp.cid }}</a>
             {% endfor %}
         </div>
         <div id="tabs-content">
@@ -15,3 +15,24 @@
     {% endif %}
     
 {% endblock content %}
+
+{% block extra_js %}
+    <script rel="text/javascript" language="javascript">
+        window.onload = function() {
+            const activeTab = document.querySelector("#competition-tabs .active");
+            if (activeTab==null) {
+                const firstTab = document.getElementById("{{ selected_competition_id }}");
+                if (firstTab) {
+                    firstTab.click();
+                }
+            }
+        };
+        // Nach 10 Sekunden den Tab neu laden, um die Ergebnisse zu aktualisieren
+        setInterval(function() {
+            const activeTab = document.querySelector("#competition-tabs .active");
+            if (activeTab) {
+                activeTab.click();
+            }
+        }, 10000);
+    </script>
+{% endblock extra_js %}

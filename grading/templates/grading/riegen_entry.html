@@ -1,0 +1,19 @@
+{% if selected_riege %}
+    <h2>Riege {{ selected_riege }}</h2>
+{% else %}
+    <p>Bitte eine Riege auswählen, um die SportlerInnnen anzuzeigen.</p>
+{% endif %}
+
+{% if riegen_list %}
+    <div id="riegen-list-container">
+        <table class="no_border">
+            <tr><th>Startnr.</th><th>SportlerIn</th><th>WK</th><th>Disziplinen</th></tr>
+            {% for entry in riegen_list %}
+                 <tr><td>{{ entry.athlete.sid}}</td><td>{{ entry.athlete.vorname }} {{ entry.athlete.nachname }}<br />&nbsp;&nbsp;<span class="small">({{ entry.athlete.geburtsjahr }} - {{ entry.athlete.verein }})</span></td>
+                    <td>{{ entry.competition.cid }}</td><td>{% for dis in entry.disciplines %}<div class="discipline_box {% if dis.allowed_to_grade %} {% if dis.score > 0 %} graded {% else %} not_graded {% endif %}{% endif %}">{% if dis.allowed_to_grade %}<a href="{% url 'grading:grade' entry.athlete.sid %}?cid={{entry.competition.cid}}&did={{dis.discipline.did}}">{% endif %}{{ dis.discipline.bezeichnung }}{% if dis.score > 0 %}<br /> <span class="small">({{dis.score}})</span>{% endif %}{% if dis.allowed_to_grade %}</a>{% endif %}</div>{% endfor %}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
+        <p>In dieser Riege sind keine SportlerInnen vorhanden.</p>
+    {% endif %}

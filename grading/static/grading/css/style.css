@@ -239,6 +239,7 @@ form.grade input[type="text"] {
 
 form.grade input[type=submit], button.grade{
     margin-top: 10px;
+    margin-right: 560px;
     padding: 10px 20px;
     font-size: 16px;
     background-color: rgb(102, 102, 102);
@@ -246,6 +247,22 @@ form.grade input[type=submit], button.grade{
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    float:left
+}
+
+button.grade{
+    margin-right: 490px;
+}
+
+button.nav {
+    padding: 10px 20px;
+    margin-left:5pt;
+    margin-right: 5px;
+}
+
+button.nav:disabled {
+    background-color: rgb(200, 200, 200);
+    cursor: not-allowed;
 }
 
 button {
@@ -333,7 +350,7 @@ div#tabs-content {
     margin-top: -1px;
 }
 
-div#ranking-list-container {
+div#ranking-list-container, div#riegen-list-container {
     margin-left: 10px;
     height:340px;
     max-height:340px;
@@ -343,4 +360,22 @@ div#ranking-list-container {
 .small {
     font-size: 12px;
     color: rgb(102, 102, 102);
+}
+
+div.discipline_box {
+    display: block;
+    background-color: lightgray;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin: 2px;
+    float:left;
+    text-align:center;
+}
+
+div.not_graded {
+    background-color: rgb(250, 158, 125);
+}
+
+div.graded {
+    background-color: lightgreen;
 }

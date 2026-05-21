@@ -45,6 +45,7 @@
                 <div class="menu">
                     <ul>
                         <li><a href="{% url 'grading:index' %}">Übersicht</a></li>
+                        <li><a href="{% url 'grading:riegen' %}">Riegen</a></li>
                         {% if user.is_superuser or user.is_staff %}
                             <li><a href="{% url 'grading:all_results' %}">Ergebnisse</a></li>
                             <li><a href="{% url 'admin:index' %}">Admin-Seite</a></li>

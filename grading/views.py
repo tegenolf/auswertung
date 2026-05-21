@@ -1,4 +1,4 @@
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Min
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
@@ -95,6 +95,55 @@ class IndexView(LoginRequiredMixin, generic.ListView):
         context['not_allowed_athletes'] = not_allowed_athletes
         context['settings_dict'] = read_settings_xml()
         return context
+
+## Die Riegen-Seite zeigt eine Liste aller Athleten an, in Tabs sortiert nach Riegen.
+# Es ist gekennhzeichnet, welcher Athlete bereits an dem vom Kari berechtigten Gerät bewertet wurde. ##
+class RiegenView(LoginRequiredMixin, generic.ListView):
+    template_name = "grading/riegen.html"
+    context_object_name = "riegen_list"
+
+    def get_queryset(self):
+        """Return a list of athletes filtered by Riege and permission to grade."""
+        if self.request.GET.get('riege'):
+            result = Athlete_Comp.objects.filter(athlete__riege=self.request.GET.get('riege')).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+        #if self.request.GET.get('cid'):
+        #    return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
+        else:
+            id = Athlete.objects.filter(riege__isnull=False).all().aggregate(Min('riege'))['riege__min'] if Athlete.objects.filter(riege__isnull=False).exists() else None
+            result = Athlete_Comp.objects.filter(athlete__riege=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+        allowed_results = []
+        for entry in result:
+            if entry.athlete.allowed_to_grade(self.request.user.id):
+                allowed_results.append(entry)
+        return result
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        for entry in context['riegen_list']:
+            # alle Disziplinen des Wettkampfs
+            entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+            # bereits vorhandene Wertungen
+            entry.grading = []
+            for d in entry.disciplines:
+                d.score = None
+                d.allowed_to_grade = d.allowed_to_grade(self.request.user.id)
+                grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                if grading is not None and grading.score > 0:
+                    d.score = grading.score
+        context['competitions'] = Competition.objects.all().order_by("cid")
+        context['riegen'] = Athlete.objects.filter(riege__isnull=False).values_list('riege', flat=True).distinct().order_by('riege')
+        if self.request.GET.get('riege'):
+            context['selected_riege'] = self.request.GET.get('riege')
+        else:
+            context['selected_riege'] = context['riegen'].first() if context['riegen'] else None
+        context['settings_dict'] = read_settings_xml()
+        return context
+    
+    def get_template_names(self):
+        if self.request.htmx:
+            return ["grading/riegen_list.html"]
+        else:
+            return ["grading/riegen.html"]
 
 ## Die Detail-Seite zeigt die Details eines Athleten an, einschließlich der Wettkämpfe, an denen er 
 # teilnimmt, und der Disziplinen, für die der angemeldete Benutzer Wertungen eingeben darf. ##
@@ -213,6 +262,9 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
         context['initial_grading'] = initial_grading
         context['settings_dict'] = settings_dict
         context['not_changeable'] = False
+        context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
+        print(context['next'])
+        context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
         return context
     
     def test_func(self):
@@ -244,6 +296,8 @@ class ResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
         context['initial_grading'] = initial_grading
         context['settings_dict'] = read_settings_xml()
         context['not_changeable'] = True
+        context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
+        context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
         return context
 
     def test_func(self):
@@ -272,7 +326,7 @@ class AllResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         for entry in context['ranking_list']:
-            entry.disciplines = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid).select_related("discipline")
+            entry.disciplines = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
         context['competitions'] = Competition.objects.all().order_by("cid")
         if self.request.GET.get('cid'):
             context['selected_competition_id'] = self.request.GET.get('cid')
@@ -451,7 +505,11 @@ def save_grade(request, athlete_id):
 
         # Gesamtpunktzahl in Athlete_Comp aktualisieren
         athlete_comp = Athlete_Comp.objects.get(athlete_id=athlete_id, competition_id=request.POST["cid"])
-        totalscore = Grading.objects.filter(athlete_id=athlete_id, competition_id=request.POST["cid"]).aggregate(Sum('score'))['score__sum']
+        if (athlete_comp.competition.vier_aus_sechs):
+            totalscore = Grading.objects.filter(athlete_id=athlete_id, competition_id=request.POST["cid"]).order_by('-score').values_list('score', flat=True)[:4]
+            totalscore = sum(totalscore)
+        else:
+            totalscore = Grading.objects.filter(athlete_id=athlete_id, competition_id=request.POST["cid"]).aggregate(Sum('score'))['score__sum']
         athlete_comp.score = round(totalscore,3)
         athlete_comp.save()
 
@@ -766,9 +824,9 @@ def database_import(request):
     
     try:
         # Wettbewerbe importieren
-        c.execute("SELECT WettkampfID, Wettkampfname FROM wettkämpfe")
+        c.execute("SELECT WettkampfID, Wettkampfname, 4aus6 FROM wettkämpfe")
         for row in c.fetchall():
-            competition = Competition(cid=row[0], name=row[1])
+            competition = Competition(cid=row[0], name=row[1], vier_aus_sechs=row[2])
             competition.save()
     except:
         context = read_settings_xml()
@@ -781,9 +839,9 @@ def database_import(request):
     
     try:
         # Athleten und Athleten-Wettbewerbe-Zuordnung importieren
-        c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
+        c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang, t.Riege FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
         for row in c.fetchall():
-            athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1)
+            athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1, riege=row[8])
             athlete.save()
             athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], ranking=row[7])
             athlete_comp.save()
@@ -869,7 +927,7 @@ def database_import(request):
             )
         try:
             # Wettbewerbe importieren
-            c.execute("SELECT WettkampfID, Wettkampfname FROM wettkämpfe")
+            c.execute("SELECT WettkampfID, Wettkampfname, 4aus6 FROM wettkämpfe")
             db12_competitions = []
             db1_competitions = list(Competition.objects.values_list('cid', flat=True))
             for row in c.fetchall():
@@ -886,7 +944,7 @@ def database_import(request):
                         )
                     db12_competitions.append(row[0])              
                 else:
-                    competition = Competition(cid=row[0], name=row[1])
+                    competition = Competition(cid=row[0], name=row[1], vier_aus_sechs=row[2])
                     competition.save()
         except:
             context = read_settings_xml()
@@ -899,7 +957,7 @@ def database_import(request):
 
         try:
             # Athleten und Athleten-Wettbewerbe-Zuordnung importieren
-            c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
+            c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang, t.Riege FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
             for row in c.fetchall():
                 # Überprüfen, ob Athlet bereits existiert
                 if Athlete.objects.filter(sid=row[0]).exists():
@@ -911,7 +969,7 @@ def database_import(request):
                         context,
                     )
                 else:   
-                    athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=2)
+                    athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=2, riege=row[8])
                     athlete.save()
                     athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], ranking=row[7])
                     athlete_comp.save()
