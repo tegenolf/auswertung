@@ -21,11 +21,14 @@
         <h2>Wettkampf</h2>
         <table>
             <tr><td><strong>Wettkampftitel:</strong></td><td><input type="text" id="wk_title" name="wk_title" value="{{ wk_title }}"></td></tr>
-            <tr><td><strong>Wettkampfart:</strong></td><td><input type="radio" id="wk_type" name="wk_type" value="einzel"  
+            <tr><td><strong>Wettkampfart:</strong></td><td><input type="radio" id="wk_type_einzel" name="wk_type" value="einzel"  
             {% if wk_type == 'einzel' %}checked{% endif %}
-            >Einzel<input style="margin-left:30px;"type="radio" id="wk_type" name="wk_type" value="mannschaft" 
+            >Einzel<input style="margin-left:30px;"type="radio" id="wk_type_mannschaft" name="wk_type" value="mannschaft" 
             {% if wk_type == 'mannschaft' %}checked{% endif %}
             >Mannschaft</td></tr>
+            <tr><td><strong>Runde:</strong></td><td><input type="radio" id="runde1" name="runde" value="1" {% if runde == '1' %}checked{% endif %}
+                {% if wk_type == 'einzel' %}disabled{% endif %}>1<input type="radio" id="runde2" name="runde" value="2" {% if runde == '2' %}checked{% endif %}
+                {% if wk_type == 'einzel' %}disabled{% endif %}>2</td></tr>
         </table>
         <button type="submit">Wettkampf-Änderungen speichern</button>
     </form>
@@ -114,6 +117,30 @@
                 deleteDiv.style.display = "none";
             }
             return false; // Prevent default link behavior
+        };
+        document.getElementById("wk_type_mannschaft").onchange = function() {
+            var rundeRadios = document.getElementsByName("runde");
+            if (this.value === "mannschaft") {
+                for (var i = 0; i < rundeRadios.length; i++) {
+                    rundeRadios[i].disabled = false;
+                }
+            } else {
+                for (var i = 0; i < rundeRadios.length; i++) {
+                    rundeRadios[i].disabled = true;
+                }
+            }
+        };
+        document.getElementById("wk_type_einzel").onchange = function() {
+            var rundeRadios = document.getElementsByName("runde");
+            if (this.value === "mannschaft") {
+                for (var i = 0; i < rundeRadios.length; i++) {
+                    rundeRadios[i].disabled = false;
+                }
+            } else {
+                for (var i = 0; i < rundeRadios.length; i++) {
+                    rundeRadios[i].disabled = true;
+                }
+            }
         };
     </script>
 {% endblock extra_js %}

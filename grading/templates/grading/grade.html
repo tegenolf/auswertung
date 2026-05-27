@@ -8,11 +8,23 @@
 {% endblock success %}
 
 {% block content %}
-    <h1>{{ athlete.vorname }} {{ athlete.nachname }} (Startnr. {{ athlete.sid }})</h1>
-    <p>
-        <strong>Jahrgang:</strong> {{ athlete.geburtsjahr }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-        <strong>Verein:</strong> {{ athlete.verein }}
-    </p>
+    {% if settings_dict.wk_type == 'mannschaft' %}
+        <h1>{{ athlete.vorname }} {{ athlete.nachname }}</h1>
+        <p>
+            <strong>Jahrgang:</strong> {{ athlete.geburtsjahr }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <strong>Mannschaft:</strong> {{ athlete.mannschaft.verein }} {% if athlete.mannschaft.mannschaftsnr > 0 %}{{ athlete.mannschaft.mannschaftsnr }} {% endif %}(Startnr. {{ athlete.mannschaft.mid }})
+        </p>
+        <p style="margin-bottom:0">
+            <strong>WK {{ competition.cid}}:</strong> {{ competition.name }}
+        </p>
+    {% else %}
+        <h1>{{ athlete.vorname }} {{ athlete.nachname }} (Startnr. {{ athlete.sid }})</h1>
+        <p>
+            <strong>Jahrgang:</strong> {{ athlete.geburtsjahr }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <strong>Verein:</strong> {{ athlete.verein }}
+        </p>
+    {% endif %}
+
     {% if not_changeable %}
     <form class="grade" action="" method="post">
     {% else %}
@@ -21,7 +33,7 @@
         {% csrf_token %}
         <fieldset>
             <legend>
-                <h2>WK {{ competition.cid}}: {{ competition.name }} - Disziplin: {{ discipline.bezeichnung }}</h2>
+                <h2>{% if settings_dict.wk_type == 'einzel' %}WK {{ competition.cid}}: {{ competition.name }} - {% endif %}Disziplin: {{ discipline.bezeichnung }}</h2>
             </legend>
         
             <input type="hidden" name="did" value="{{ discipline.did }}">
@@ -80,9 +92,11 @@
         <input id="submit" type="submit" value="Speichern" class="speichern">
         </form>
         {% endif %}
-        <button id="back" class="nav"{% if not previous %} disabled {% endif %}><<</button>
-        <button id="list" class="nav">Zur Riegenliste</button>
-        <button id="next" class="nav"{% if not next %} disabled {% endif %}>>></button>
+        <div class="nav_container">
+            <button id="back" class="nav"{% if not previous %} disabled {% endif %}><<</button>
+            <button id="list" class="nav">{% if settings_dict.wk_type == 'mannschaft' %}Zur Mannschaft{% else %}Zur Riegenliste{% endif %}</button>
+            <button id="next" class="nav"{% if not next %} disabled {% endif %}>>></button>
+        </div>
 {% endblock content %}
 
 {% block extra_js %}
@@ -99,7 +113,11 @@
         }
         function backToList() {
             // Redirect to the list page
-            const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.riege }}";
+            {% if settings_dict.wk_type == 'mannschaft' %}
+                const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.mannschaft.mid }}";
+            {% else %}
+                const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.riege }}";
+            {% endif %}
             window.location.href = listUrl;
         }
         {% if previous %}
@@ -230,7 +248,11 @@
         function backToList() {
             if (warnBeforeLeaving()) {
                 // Redirect to the list page
-                const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.riege }}";
+                {% if settings_dict.wk_type == 'mannschaft' %}
+                    const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.mannschaft.mid }}";
+                {% else %}
+                    const listUrl = "{% url 'grading:riegen' %}?riege={{ athlete.riege }}";
+                {% endif %}
                 window.location.href = listUrl;
             }
         }

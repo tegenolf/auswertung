@@ -1,12 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <h1>Riegen</h1>
+    {% if settings_dict.wk_type == 'mannschaft' %}
+        <h1>Mannschaften</h1>
+    {% else %}
+        <h1>Riegen</h1>
+    {% endif %}
     <!-- Riegen-Tabs-->
     {% if riegen %}
         <div class="tabs" id="riegen-tabs" hx-target="#tabs-content" hx-swap="innerHTML" _="on htmx:afterOnLoad take .active for event.target">
             {% for riege in riegen %}
-                <a hx-get="{% url 'grading:riegen' %}?riege={{ riege }}" id ="{{ riege }}" class="tab {% if riege == selected_riege %}active{% endif %}">Riege {{ riege }}</a>
+                <a hx-get="{% url 'grading:riegen' %}?riege={{ riege }}" id ="{{ riege }}" class="tab {% if riege == selected_riege %}active{% endif %}">{% if settings_dict.wk_type == 'einzel' %} Riege {% endif %} {{ riege }}</a>
             {% endfor %}
         </div>
         <div id="tabs-content">

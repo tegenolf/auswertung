@@ -26,17 +26,23 @@
             <div class="header_container">
                 <div class="logo"></div>
                 <div class="header">Wettkampfauswertung
-                    {% if settings_dict.wk_title %}<br><span class="wk_title">{{ settings_dict.wk_title }}</span>{% endif %}
+                    {% if settings_dict.wk_title %}<br><span class="wk_title">{{ settings_dict.wk_title }}{% if settings_dict.runde and settings_dict.runde != '0' %} (Runde {{ settings_dict.runde }}){% endif %}</span>{% endif %}
                 </div>
                 <div class="search">
                     {% if user.is_authenticated %}
-
-                    <form id="athlete_search" method="get" action="{% url 'grading:grade' 0 %}">
-                        <label for="sid_search">Sportler suchen (Startnr.):</label><br>
-                        <input type="number" name="sid_search" id="sid_search" min="1" required>
-                        <input id="sid_search_submit" type="submit" value=">">
-                    </form> 
-
+                        {% if settings_dict.wk_type == 'mannschaft' %}
+                        <form id="athlete_search" method="get" action="{% url 'grading:riegen' %}?riege=0">
+                            <label for="riege">Mannschaft suchen (Startnr.):</label><br>
+                            <input type="number" name="riege" id="sid_search" min="1" required>
+                            <input id="sid_search_submit" type="submit" value=">">
+                        </form>
+                        {% else %}
+                        <form id="athlete_search" method="get" action="{% url 'grading:grade' 0 %}">
+                            <label for="sid_search">Sportler suchen (Startnr.):</label><br>
+                            <input type="number" name="sid_search" id="sid_search" min="1" required>
+                            <input id="sid_search_submit" type="submit" value=">">
+                        </form>
+                        {% endif %}
                     {% endif %}
 
                 </div>
@@ -45,7 +51,11 @@
                 <div class="menu">
                     <ul>
                         <li><a href="{% url 'grading:index' %}">Übersicht</a></li>
-                        <li><a href="{% url 'grading:riegen' %}">Riegen</a></li>
+                        {% if settings_dict.wk_type == 'mannschaft' %}
+                            <li><a href="{% url 'grading:riegen' %}">Mannschaften</a></li>
+                        {% else %}
+                            <li><a href="{% url 'grading:riegen' %}">Riegen</a></li>
+                        {% endif %}
                         {% if user.is_superuser or user.is_staff %}
                             <li><a href="{% url 'grading:all_results' %}">Ergebnisse</a></li>
                             <li><a href="{% url 'admin:index' %}">Admin-Seite</a></li>
@@ -86,17 +96,29 @@
                     if (!confirmLeave) {
                         event.preventDefault();
                     }
+                    {% if settings_dict.wk_type == 'einzel' %}
                     else {
                         const sid = parseInt(sid_input.value);
-                        const action_url = "{% url 'grading:grade' 0 %}".replace("/0/", "/" + sid + "/");
+                        {% if settings_dict.wk_type == 'mannschaft' %}
+                            const action_url = "{% url 'grading:riegen' %}?riege=0".replace("0", sid);
+                        {% else %}
+                            const action_url = "{% url 'grading:grade' 0 %}".replace("/0/", "/" + sid + "/");
+                        {% endif %}
                         document.getElementById("athlete_search").action = action_url;
                     }
+                    {% endif %}
                 }
+                {% if settings_dict.wk_type == 'einzel' %}
                 else {
                     const sid = parseInt(sid_input.value);
-                    const action_url = "{% url 'grading:grade' 0 %}".replace("/0/", "/" + sid + "/");
+                    {% if settings_dict.wk_type == 'mannschaft' %}
+                        const action_url = "{% url 'grading:riegen' %}?riege=0".replace("0", sid);
+                    {% else %}
+                        const action_url = "{% url 'grading:grade' 0 %}".replace("/0/", "/" + sid + "/");
+                    {% endif %} 
                     document.getElementById("athlete_search").action = action_url;
                 }
+                {% endif %}
             });
             function initializeHeight() {
                 var height = document.getElementById('content').offsetHeight - (document.getElementById('error').offsetHeight + document.getElementById('success').offsetHeight);

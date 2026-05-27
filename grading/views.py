@@ -104,13 +104,21 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return a list of athletes filtered by Riege and permission to grade."""
+        settings_dict = read_settings_xml()
         if self.request.GET.get('riege'):
-            result = Athlete_Comp.objects.filter(athlete__riege=self.request.GET.get('riege')).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+            if settings_dict['wk_type'] == 'mannschaft':
+                result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=self.request.GET.get('riege')).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+            else:
+                result = Athlete_Comp.objects.filter(athlete__riege=self.request.GET.get('riege')).order_by("athlete_id","competition_id").select_related("athlete", "competition")
         #if self.request.GET.get('cid'):
         #    return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
         else:
-            id = Athlete.objects.filter(riege__isnull=False).all().aggregate(Min('riege'))['riege__min'] if Athlete.objects.filter(riege__isnull=False).exists() else None
-            result = Athlete_Comp.objects.filter(athlete__riege=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+            if settings_dict['wk_type'] == 'mannschaft':
+                id = Athlete.objects.filter(mannschaft__isnull=False).all().aggregate(Min('mannschaft'))['mannschaft__min'] if Athlete.objects.filter(mannschaft__isnull=False).exists() else None
+                result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+            else:
+                id = Athlete.objects.filter(riege__isnull=False).all().aggregate(Min('riege'))['riege__min'] if Athlete.objects.filter(riege__isnull=False).exists() else None
+                result = Athlete_Comp.objects.filter(athlete__riege=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
         allowed_results = []
         for entry in result:
             if entry.athlete.allowed_to_grade(self.request.user.id):
@@ -119,6 +127,7 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['settings_dict'] = read_settings_xml()
         for entry in context['riegen_list']:
             # alle Disziplinen des Wettkampfs
             entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
@@ -127,16 +136,29 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
             for d in entry.disciplines:
                 d.score = None
                 d.allowed_to_grade = d.allowed_to_grade(self.request.user.id)
-                grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                if int(context['settings_dict']['runde']) > 0:
+                    grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(context['settings_dict']['runde'])).first()
+                else:
+                    grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
                 if grading is not None and grading.score > 0:
                     d.score = grading.score
         context['competitions'] = Competition.objects.all().order_by("cid")
-        context['riegen'] = Athlete.objects.filter(riege__isnull=False).values_list('riege', flat=True).distinct().order_by('riege')
+        if context['settings_dict']['wk_type'] == 'mannschaft':
+            allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.all() if mannschaft.allowed_to_grade(self.request.user.id)]
+            context['riegen'] = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+            #context['riegen'] = allowed_mids#Athlete.objects.filter(mannschaft__isnull=False).values_list('mannschaft', flat=True).distinct().order_by('mannschaft')
+            print(type(context['riegen'][0]))
+        else:
+            context['riegen'] = Athlete.objects.filter(riege__isnull=False).values_list('riege', flat=True).distinct().order_by('riege')
         if self.request.GET.get('riege'):
             context['selected_riege'] = self.request.GET.get('riege')
         else:
             context['selected_riege'] = context['riegen'].first() if context['riegen'] else None
-        context['settings_dict'] = read_settings_xml()
+        if context['settings_dict']['wk_type'] == 'mannschaft' and context['selected_riege']:
+            #context['selected_riege_data'] = Mannschaft.objects.get(mid=context['selected_riege'])
+            context['selected_riege_data'] = Mannschaft_Comp.objects.filter(mannschaft_id=context['selected_riege']).select_related("mannschaft", "competition").first()
+            if not context['selected_riege_data'].mannschaft.allowed_to_grade(self.request.user.id):
+                context['selected_riege_data'] = None
         return context
     
     def get_template_names(self):
@@ -205,6 +227,7 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        settings_dict = read_settings_xml()
         if self.request.GET.get('sid_search') is not None or (self.request.GET.get('cid') is None or self.request.GET.get('did') is None):
             competitions = self.object.athlete_comp_set.all()
             for comp in competitions:
@@ -221,10 +244,12 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
         context['competition'] = competition
         discipline = Discipline.objects.get(did=did)
         context['discipline'] = discipline
-        initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
+        if int(settings_dict['runde']) > 0:
+            initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, day=int(settings_dict['runde'])).first()
+        else:
+            initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
         
         # Auf Änderungen in Didis Datenbank checken
-        settings_dict = read_settings_xml()
         try:
             # Datenbankverbindung basierend auf dbid herstellen
             if self.object.dbid == 1:
@@ -232,7 +257,10 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
             elif self.object.dbid == 2:
                 db = MySQLdb.connect(host=settings_dict['db2_host'], user=settings_dict['db2_user'], passwd=settings_dict['db2_password'], db=settings_dict['db2_name'], port=int(settings_dict['db2_port']))        
             cursor = db.cursor()
-            cursor.execute("SELECT Punktzahl FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s", (self.object.sid,did))
+            if int(settings_dict['runde']) > 0:
+                cursor.execute("SELECT Punktzahl FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (self.object.sid,did, settings_dict['runde']))
+            else:
+                cursor.execute("SELECT Punktzahl FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s", (self.object.sid,did))
             didi_grading = cursor.fetchone()
             db.commit()
             cursor.close()
@@ -249,10 +277,16 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
                         initial_grading.ewert = 0
                         initial_grading.dwert = 0
                         initial_grading.save()
-                        initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
+                        if int(settings_dict['runde']) > 0:
+                            initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, day=int(settings_dict['runde'])).first()
+                        else:
+                            initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
                         context['error_message'] = "Die gespeicherte Wertung stimmte nicht mit der Wertung in Didis Datenbank überein. Sie wurde aktualisiert."
                 elif didi_grading[0] != 0:
-                    grading = Grading(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, score=didi_grading[0], kari1=0, kari2=0, kari3=0, kari4=0, kari5=0, awert=-1*didi_grading[0], ewert=0, dwert=0)
+                    if int(settings_dict['runde']) > 0:
+                        grading = Grading(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, score=didi_grading[0], kari1=0, kari2=0, kari3=0, kari4=0, kari5=0, awert=-1*didi_grading[0], ewert=0, dwert=0, day=int(settings_dict['runde']))
+                    else:
+                        grading = Grading(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, score=didi_grading[0], kari1=0, kari2=0, kari3=0, kari4=0, kari5=0, awert=-1*didi_grading[0], ewert=0, dwert=0)
                     grading.save()
                     initial_grading = grading
                     context['error_message'] = "In Didis Datenbank war bereits eine Wertung gespeichert. Sie wurde nun übernommen."
@@ -262,9 +296,12 @@ class GradeView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
         context['initial_grading'] = initial_grading
         context['settings_dict'] = settings_dict
         context['not_changeable'] = False
-        context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
-        print(context['next'])
-        context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
+        if settings_dict['wk_type'] == 'mannschaft':
+            context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,mannschaft=self.object.mannschaft).order_by("sid").first()
+            context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,mannschaft=self.object.mannschaft).order_by("-sid").first()
+        else:
+            context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
+            context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
         return context
     
     def test_func(self):
@@ -288,16 +325,23 @@ class ResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['settings_dict'] = read_settings_xml()
         competition = Competition.objects.get(cid=self.request.GET.get('cid'))
         context['competition'] = competition
         discipline = Discipline.objects.get(did=self.request.GET.get('did'))
         context['discipline'] = discipline
-        initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
+        if int(context['settings_dict']['runde']) > 0:
+            initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did, day=int(context['settings_dict']['runde'])).first()
+        else:
+            initial_grading = Grading.objects.filter(athlete_id=self.object.sid, competition_id=competition.cid, discipline_id=discipline.did).first()
         context['initial_grading'] = initial_grading
-        context['settings_dict'] = read_settings_xml()
         context['not_changeable'] = True
-        context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
-        context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
+        if context['settings_dict']['wk_type'] == 'mannschaft':
+            context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,mannschaft=self.object.mannschaft).order_by("sid").first()
+            context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,mannschaft=self.object.mannschaft).order_by("-sid").first()
+        else:
+            context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
+            context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
         return context
 
     def test_func(self):
@@ -313,11 +357,19 @@ class AllResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
 
     def get_queryset(self):
         """Return a list of scores."""
-        if self.request.GET.get('cid'):
-            return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
+        settings_dict = read_settings_xml()
+        if settings_dict['wk_type'] == 'mannschaft':
+            if self.request.GET.get('cid'):
+                return Mannschaft_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("mannschaft", "competition")
+            else:
+                id = Competition.objects.first().cid if Competition.objects.first() else None
+                return Mannschaft_Comp.objects.filter(competition_id=id).order_by("ranking").select_related("mannschaft", "competition")
         else:
-            id = Competition.objects.first().cid if Competition.objects.first() else None
-            return Athlete_Comp.objects.filter(competition_id=id).order_by("ranking").select_related("athlete", "competition")
+            if self.request.GET.get('cid'):
+                return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
+            else:
+                id = Competition.objects.first().cid if Competition.objects.first() else None
+                return Athlete_Comp.objects.filter(competition_id=id).order_by("ranking").select_related("athlete", "competition")
     
     def test_func(self):
         user = self.request.user
@@ -325,15 +377,25 @@ class AllResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['settings_dict'] = read_settings_xml()
         for entry in context['ranking_list']:
-            entry.disciplines = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+            if context['settings_dict']['wk_type'] == 'mannschaft':
+                if context['settings_dict']['runde'] and int(context['settings_dict']['runde']) > 0:
+                    entry.disciplines = Mannschaft_Grading.objects.filter(mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid, day=int(context['settings_dict']['runde'])).order_by("discipline_id").select_related("discipline")
+                    #entry.athletes = Grading.objects.filter(athlete__mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid, day=int(context['settings_dict']['runde'])).order_by("athlete_id").select_related("athlete")
+                else:
+                    entry.disciplines = Mannschaft_Grading.objects.filter(mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+            else:
+                if context['settings_dict']['runde'] and int(context['settings_dict']['runde']) > 0:
+                    entry.disciplines = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, day=int(context['settings_dict']['runde'])).order_by("discipline_id").select_related("discipline")
+                else:
+                    entry.disciplines = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
         context['competitions'] = Competition.objects.all().order_by("cid")
         if self.request.GET.get('cid'):
             context['selected_competition_id'] = self.request.GET.get('cid')
         else:
             context['selected_competition_id'] = context['competitions'].first().cid if context['competitions'] else None
         context['selected_competition_name'] = Competition.objects.get(cid=context['selected_competition_id']).name
-        context['settings_dict'] = read_settings_xml()
         return context
     
     def get_template_names(self):
@@ -460,7 +522,11 @@ def save_grade(request, athlete_id):
                     "error_message": "Sie haben keine Berechtigung, diese Wertung zu ändern.",
                 },
             )
-        grading = Grading.objects.get(athlete_id=athlete_id, competition_id=request.POST["cid"], discipline_id=request.POST["did"])
+        settings_dict = read_settings_xml()
+        if int(settings_dict['runde']) > 0:
+            grading = Grading.objects.get(athlete_id=athlete_id, competition_id=request.POST["cid"], discipline_id=request.POST["did"], day=int(settings_dict['runde']))
+        else:
+            grading = Grading.objects.get(athlete_id=athlete_id, competition_id=request.POST["cid"], discipline_id=request.POST["did"])
         grading.kari1 = request.POST["kari1"]
         grading.kari2 = request.POST["kari2"]
         grading.kari3 = request.POST["kari3"]
@@ -472,7 +538,10 @@ def save_grade(request, athlete_id):
         grading.score = request.POST["score"]
         log_text = f"Wertung geändert";
     except Grading.DoesNotExist:
-        grading = Grading(athlete_id=athlete_id, competition_id=request.POST["cid"], discipline_id=request.POST["did"], kari1=request.POST["kari1"], kari2=request.POST["kari2"], kari3=request.POST["kari3"], kari4=request.POST["kari4"], kari5=request.POST["kari5"], ewert=request.POST["ewert"], awert=request.POST["awert"], dwert=request.POST["dwert"], score=request.POST["score"])
+        if int(settings_dict['runde']) > 0:
+            grading = Grading(athlete_id=athlete_id, competition_id=request.POST["cid"], discipline_id=request.POST["did"], kari1=request.POST["kari1"], kari2=request.POST["kari2"], kari3=request.POST["kari3"], kari4=request.POST["kari4"], kari5=request.POST["kari5"], ewert=request.POST["ewert"], awert=request.POST["awert"], dwert=request.POST["dwert"], score=request.POST["score"], day=int(settings_dict['runde']))
+        else:
+            grading = Grading(athlete_id=athlete_id, competition_id=request.POST["cid"], discipline_id=request.POST["did"], kari1=request.POST["kari1"], kari2=request.POST["kari2"], kari3=request.POST["kari3"], kari4=request.POST["kari4"], kari5=request.POST["kari5"], ewert=request.POST["ewert"], awert=request.POST["awert"], dwert=request.POST["dwert"], score=request.POST["score"])
         log_text = f"Wertung hinzugefügt";
     except (KeyError, ValueError):
         return render(
@@ -505,32 +574,127 @@ def save_grade(request, athlete_id):
 
         # Gesamtpunktzahl in Athlete_Comp aktualisieren
         athlete_comp = Athlete_Comp.objects.get(athlete_id=athlete_id, competition_id=request.POST["cid"])
-        if (athlete_comp.competition.vier_aus_sechs):
+        if (settings_dict['wk_type'] == 'einzel' and athlete_comp.competition.vier_aus_sechs):
             totalscore = Grading.objects.filter(athlete_id=athlete_id, competition_id=request.POST["cid"]).order_by('-score').values_list('score', flat=True)[:4]
-            totalscore = sum(totalscore)
+            totalscore = round(sum(totalscore),3)
         else:
             totalscore = Grading.objects.filter(athlete_id=athlete_id, competition_id=request.POST["cid"]).aggregate(Sum('score'))['score__sum']
-        athlete_comp.score = round(totalscore,3)
+        if int(settings_dict['runde']) == 2:
+            athlete_comp.score2 = totalscore
+        else:            
+            athlete_comp.score = totalscore
         athlete_comp.save()
 
         # Ranking aktualisieren
-        athlete_comps = Athlete_Comp.objects.filter(competition_id=request.POST["cid"],athlete__dbid=request.POST["dbid"]).order_by('-score')
+        athlete_comps = Athlete_Comp.objects.filter(competition_id=request.POST["cid"],athlete__dbid=request.POST["dbid"],athlete__ak=False).annotate(total_score=F('score') + F('score2')).order_by('-total_score')
         ranking = 1
         i = 1
         for ac in athlete_comps:
             if i == 1:
                 ac.ranking = ranking
-                previous_score = ac.score
+                previous_score = ac.total_score
             else:
-                if previous_score != ac.score:
+                if previous_score != ac.total_score:
                     ranking = i
-                    previous_score = ac.score
+                    previous_score = ac.total_score
                 ac.ranking = ranking
             ac.save()
             i += 1
 
+        # Mannschaftswertung aktualisieren, falls es sich um einen Mannschaftswettkampf handelt
+        if settings_dict['wk_type'] == 'mannschaft' and not athlete_comp.athlete.ak:
+            # Disziplinenwertung aktualisieren
+            if int(settings_dict['runde']) > 0:
+                team_score = Grading.objects.filter(competition_id=request.POST["cid"], athlete__mannschaft_id=athlete_comp.athlete.mannschaft.mid, discipline_id=request.POST["did"], day=int(settings_dict['runde']), athlete__ak=False).order_by('-score').values_list('score', flat=True)[:3]
+            else:
+                team_score = Grading.objects.filter(competition_id=request.POST["cid"], athlete__mannschaft_id=athlete_comp.athlete.mannschaft.mid, discipline_id=request.POST["did"], athlete__ak=False).order_by('-score').values_list('score', flat=True)[:3]
+            team_score = round(sum(team_score),3)
+            
+            try:
+                if int(settings_dict['runde']) > 0:
+                    mannschaft_grading = Mannschaft_Grading.objects.get(competition_id=request.POST["cid"], discipline_id=request.POST["did"], mannschaft__mid=athlete_comp.athlete.mannschaft.mid, day=int(settings_dict['runde']))
+                else:                
+                    mannschaft_grading = Mannschaft_Grading.objects.get(competition_id=request.POST["cid"], discipline_id=request.POST["did"], mannschaft__mid=athlete_comp.athlete.mannschaft.mid)
+                mannschaft_grading.score = team_score
+                
+            except Mannschaft_Grading.DoesNotExist:
+                if int(settings_dict['runde']) > 0:
+                    mannschaft_grading = Mannschaft_Grading(competition_id=request.POST["cid"], discipline_id=request.POST["did"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, score=team_score, day=int(settings_dict['runde']))
+                else:
+                    mannschaft_grading = Mannschaft_Grading(competition_id=request.POST["cid"], discipline_id=request.POST["did"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, score=team_score)
+
+            mannschaft_grading.save()
+
+            # Gesamtwertung aktualisieren
+            if (athlete_comp.competition.vier_aus_sechs):
+                if int(settings_dict['runde']) > 0:
+                    total_team_score = Mannschaft_Grading.objects.filter(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, day=int(settings_dict['runde'])).order_by('-score').values_list('score', flat=True)[:4]
+                else:
+                    total_team_score = Mannschaft_Grading.objects.filter(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid).order_by('-score').values_list('score', flat=True)[:4]
+                total_team_score = sum(total_team_score)
+            else:
+                if int(settings_dict['runde']) > 0:
+                    total_team_score = Mannschaft_Grading.objects.filter(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, day=int(settings_dict['runde'])).aggregate(Sum('score'))['score__sum']
+                else:
+                    total_team_score = Mannschaft_Grading.objects.filter(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid).aggregate(Sum('score'))['score__sum']
+            
+            try:
+                mannschaft_comp = Mannschaft_Comp.objects.get(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid)
+                if int(settings_dict['runde']) is None or int(settings_dict['runde']) < 2:
+                    mannschaft_comp.score_day1 = total_team_score
+                elif int(settings_dict['runde']) == 2:
+                    mannschaft_comp.score_day2 = total_team_score
+                else:
+                    return render(
+                        request,
+                        "grading/grade.html",
+                        {
+                            "athlete": get_object_or_404(Athlete, pk=athlete_id),
+                            "competition": get_object_or_404(Competition, pk=request.POST.get("cid")),
+                            "discipline": get_object_or_404(Discipline, pk=request.POST.get("did")),
+                            "initial_grading": grading,
+                            "settings_dict": read_settings_xml(),
+                            "error_message": f"Die Runden-Einstellung ist falsch. Die Mannschaftswertung kann nicht gespeichert werden.",
+                        },
+                    )
+                mannschaft_comp.score = mannschaft_comp.score_day1 + mannschaft_comp.score_day2
+            except Mannschaft_Comp.DoesNotExist:
+                if int(settings_dict['runde']) is None or int(settings_dict['runde']) < 2:
+                    mannschaft_comp = Mannschaft_Comp(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, score_day1=total_team_score, score_day2=0, score=total_team_score)
+                elif int(settings_dict['runde']) == 2:
+                    mannschaft_comp = Mannschaft_Comp(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, score_day1=0, score_day2=total_team_score, score=total_team_score)
+                else:
+                    return render(
+                        request,
+                        "grading/grade.html",
+                        {
+                            "athlete": get_object_or_404(Athlete, pk=athlete_id),
+                            "competition": get_object_or_404(Competition, pk=request.POST.get("cid")),
+                            "discipline": get_object_or_404(Discipline, pk=request.POST.get("did")),
+                            "initial_grading": grading,
+                            "settings_dict": read_settings_xml(),
+                            "error_message": f"Die Runden-Einstellung ist falsch. Die Mannschaftswertung kann nicht gespeichert werden.",
+                        },
+                    )
+            mannschaft_comp.save()
+
+            # Ranking aktualisieren
+            mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"]).order_by('-score')
+            ranking = 1
+            i = 1
+            for mc in mannschaft_comps:
+                if i == 1:
+                    mc.ranking = ranking
+                    previous_score = mc.score
+                else:
+                    if previous_score != mc.score:
+                        ranking = i
+                        previous_score = mc.score
+                    mc.ranking = ranking
+                mc.save()
+                i += 1
+
         # Didis Datenbank aktualisieren
-        settings_dict = read_settings_xml()
         try:
             # Datenbankverbindung basierend auf dbid herstellen
             if request.POST["dbid"] == "1":
@@ -538,19 +702,56 @@ def save_grade(request, athlete_id):
             elif request.POST["dbid"] == "2":
                 db = MySQLdb.connect(host=settings_dict['db2_host'], user=settings_dict['db2_user'], passwd=settings_dict['db2_password'], db=settings_dict['db2_name'], port=int(settings_dict['db2_port']))        
             cursor = db.cursor()
+            
             # Update Punktzahl
-            cursor.execute("UPDATE ergebnisse SET Leistung=%s, Punktzahl=%s WHERE Startnummer=%s AND DisziplinID=%s", (grading.score, grading.score, athlete_id, request.POST["did"]))
+            if int(settings_dict['runde']) > 0:
+                cursor.execute("UPDATE ergebnisse SET Leistung=%s, Punktzahl=%s WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (grading.score, grading.score, athlete_id, request.POST["did"], settings_dict['runde']))
+            else:
+                cursor.execute("UPDATE ergebnisse SET Leistung=%s, Punktzahl=%s WHERE Startnummer=%s AND DisziplinID=%s", (grading.score, grading.score, athlete_id, request.POST["did"]))
             db.commit()
             affected_rows = cursor.rowcount
             if affected_rows is None or affected_rows == 0:
-                cursor.execute("INSERT INTO ergebnisse(Leistung,Punktzahl,Startnummer,DisziplinID) VALUES(%s,%s,%s,%s)",(grading.score, grading.score, athlete_id, request.POST["did"]))
+                if int(settings_dict['runde']) > 0:
+                    cursor.execute("INSERT INTO ergebnisse(Leistung,Punktzahl,Startnummer,DisziplinID,Runde) VALUES(%s,%s,%s,%s,%s)",(grading.score, grading.score, athlete_id, request.POST["did"], settings_dict['runde']))
+                else:
+                    cursor.execute("INSERT INTO ergebnisse(Leistung,Punktzahl,Startnummer,DisziplinID) VALUES(%s,%s,%s,%s)",(grading.score, grading.score, athlete_id, request.POST["did"]))
+            
             # Update Gesamtpunktzahl
-            cursor.execute("UPDATE teilnehmer SET Gesamtpunktzahl=%s WHERE Startnummer=%s", (totalscore, athlete_id))
+            if int(settings_dict['runde']) == 2:
+                cursor.execute("UPDATE teilnehmer SET Gesamtpunktzahl2=%s WHERE Startnummer=%s", (totalscore, athlete_id))
+            else:
+                cursor.execute("UPDATE teilnehmer SET Gesamtpunktzahl=%s WHERE Startnummer=%s", (totalscore, athlete_id))
+            
             # Update Ranking aller Teilnehmer im gleichen Wettkampf und der gleichen Datenbank
             athlete_comps = Athlete_Comp.objects.filter(competition_id=request.POST["cid"],athlete__dbid=request.POST["dbid"])
             for ac in athlete_comps:
                 cursor.execute("UPDATE teilnehmer SET Rang=%s WHERE Startnummer=%s", (ac.ranking, ac.athlete_id))
             db.commit()
+            
+
+            # Update Mannschaftswertung in Didis Datenbank, falls es sich um einen Mannschaftswettkampf handelt
+            if settings_dict['wk_type'] == 'mannschaft' and not athlete_comp.athlete.ak:
+                # Update Disziplinwertung
+                if int(settings_dict['runde']) > 0:
+                    cursor.execute("UPDATE ergebnissemannschaft SET Punktzahl=%s WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (team_score, athlete_comp.athlete.mannschaft.mid, request.POST["did"], settings_dict['runde']))
+                else:
+                    cursor.execute("UPDATE ergebnissemannschaft SET Punktzahl=%s WHERE Startnummer=%s AND DisziplinID=%s", (team_score, athlete_comp.athlete.mannschaft.mid, request.POST["did"]))
+                db.commit()
+                affected_rows = cursor.rowcount
+                if affected_rows is None or affected_rows == 0:
+                    if int(settings_dict['runde']) > 0:
+                        cursor.execute("INSERT INTO ergebnissemannschaft(Punktzahl,Startnummer,DisziplinID,Runde) VALUES(%s,%s,%s,%s)",(team_score, athlete_comp.athlete.mannschaft.mid, request.POST["did"], settings_dict['runde']))
+                    else:
+                        cursor.execute("INSERT INTO ergebnissemannschaft(Punktzahl,Startnummer,DisziplinID) VALUES(%s,%s,%s)",(team_score, athlete_comp.athlete.mannschaft.mid, request.POST["did"]))
+
+                # Update Gesamtwertung
+                cursor.execute("UPDATE mannschaft SET Tagespunktzahl1=%s AND Tagespunktzahl2=%s AND Endpunktzahl=%s WHERE StartnummerMannschaft=%s", (mannschaft_comp.score_day1,mannschaft_comp.score_day2,mannschaft_comp.score, athlete_comp.athlete.mannschaft.mid))
+
+                # Update Ranking aller Mannschaften im gleichen Wettkampf
+                mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"])
+                for mc in mannschaft_comps:
+                    cursor.execute("UPDATE mannschaft SET Rang=%s WHERE StartnummerMannschaft=%s", (mc.ranking, mc.mannschaft_id))
+                db.commit()
             cursor.close()
         except MySQLdb.Error as e:
             return render(
@@ -639,7 +840,7 @@ def change_wk_settings(request):
     user = request.user
     if not (user.is_superuser or user.is_staff):
         return HttpResponseRedirect(reverse("grading:database"))
-    update_settings_xml({'wk_title':request.POST.get('wk_title', ''), 'wk_type':request.POST.get('wk_type', '')})
+    update_settings_xml({'wk_title':request.POST.get('wk_title', ''), 'wk_type':request.POST.get('wk_type', ''), 'runde':request.POST.get('runde','')})
     logs = Logs(user=request.user, ip=get_client_ip(request) ,athlete_id=None, competition_id=None, discipline_id=None, log_text="Wettkampf-Einstellungen geändert", log_date=timezone.now())
     logs.save()
     context = read_settings_xml()
@@ -704,7 +905,7 @@ def database_backup(request):
         return HttpResponseRedirect(reverse("grading:database"))
     filename = os.path.join(os.path.dirname(__file__), 'database_backup_partial.json')
     output = open(filename, 'w')
-    call_command('dumpdata', 'grading.Athlete', 'grading.Competition', 'grading.Discipline', 'grading.Comp_Dis', 'grading.Athlete_Comp', 'grading.Grading', 'grading.Permission', 'grading.Logs', indent=4, stdout=output)
+    call_command('dumpdata', 'grading.Athlete', 'grading.Competition', 'grading.Discipline', 'grading.Comp_Dis', 'grading.Athlete_Comp', 'grading.Grading', 'grading.Permission', 'grading.Logs', 'grading.Mannschaft', 'grading.Mannschaft_Grading', indent=4, stdout=output)
     output.close()
     logs = Logs(user=request.user, ip=get_client_ip(request) ,athlete_id=None, competition_id=None, discipline_id=None, log_text="Daten exportiert", log_date=timezone.now())
     logs.save()
@@ -761,8 +962,11 @@ def database_delete(request):
     if not (user.is_superuser or user.is_staff):
         return HttpResponseRedirect(reverse("grading:database"))
     Grading.objects.all().delete()
+    Mannschaft_Grading.objects.all().delete()
+    Mannschaft_Comp.objects.all().delete()
     Athlete_Comp.objects.all().delete()
     Athlete.objects.all().delete()
+    Mannschaft.objects.all().delete()
     Permission.objects.all().delete()
     Logs.objects.all().delete()
     Comp_Dis.objects.all().delete()
@@ -805,14 +1009,15 @@ def database_import(request):
         )
     try:
         # Wettkampftitel und -typ importieren
-        c.execute("SELECT Name, Art FROM veranstaltung")
+        c.execute("SELECT Name, Art, Runde FROM veranstaltung")
         row = c.fetchone()
         if row is not None:
             if row[1] == 0:
-                row = (row[0], "einzel")
+                row = (row[0], "einzel", str(row[2]))
             elif row[1] == 1:
-                row = (row[0], "mannschaft")
-            update_settings_xml({'wk_title':row[0], 'wk_type':row[1]})
+                row = (row[0], "mannschaft", str(row[2]))
+            update_settings_xml({'wk_title':row[0], 'wk_type':row[1], 'runde':row[2]})
+            settings_dict = read_settings_xml()
     except:
         context = read_settings_xml()
         context['error_message'] = "Beim Importieren der Veranstaltungsdetails ist ein Fehler aufgetreten."
@@ -835,15 +1040,43 @@ def database_import(request):
             request,
             "grading/database.html",
             context,
-        ) 
+        )
+    try:
+        if settings_dict['wk_type'] == 'mannschaft':
+            # Mannschaften importieren
+            c.execute("SELECT m.StartnummerMannschaft, v.VereinsName, m.MannschaftsNr, m.Abzug, m.Endpunktzahl, m.Rang, m.Tagespunktzahl1, m.Tagespunktzahl2, m.WettkampfId FROM mannschaft as m INNER JOIN vereine as v ON m.Verein=v.VereinsNummer ORDER BY m.StartnummerMannschaft")
+            for row in c.fetchall():
+                mannschaft = Mannschaft(mid=row[0], verein=row[1], mannschaftsnr=row[2])
+                mannschaft.save()
+                if row[3] is None:
+                    row = (row[0], row[1], row[2], 0, row[4], row[5], row[6], row[7], row[8])
+                mannschaft_comp = Mannschaft_Comp(mannschaft_id=row[0], competition_id=row[8], abzug=row[3], score=row[4], ranking=row[5], score_day1=row[6], score_day2=row[7])
+                mannschaft_comp.save()
+    except:
+        context = read_settings_xml()
+        context['error_message'] = "Beim Importieren der Mannschaften aus Datenbank 1 ist ein Fehler aufgetreten."
+        return render(
+            request,
+            "grading/database.html",
+            context,
+        )
     
     try:
         # Athleten und Athleten-Wettbewerbe-Zuordnung importieren
-        c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang, t.Riege FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
+        if settings_dict['wk_type'] == 'mannschaft':
+            c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, m.WettkampfID, t.Gesamtpunktzahl, t.Rang, t.Riege, t.MannschaftsId, t.ak, t.Gesamtpunktzahl2 FROM teilnehmer as t INNER JOIN mannschaft as m ON t.MannschaftsId=m.StartnummerMannschaft INNER JOIN vereine as v ON m.Verein=v.VereinsNummer ORDER BY t.Startnummer")
+        else:
+            c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang, t.Riege, t.ak FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
         for row in c.fetchall():
-            athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1, riege=row[8])
+            if settings_dict['wk_type'] == 'mannschaft':
+                athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1, riege=row[8], mannschaft_id=row[9], ak=row[10])
+            else:
+                athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1, riege=row[8], ak=row[9])
             athlete.save()
-            athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], ranking=row[7])
+            if settings_dict['wk_type'] == 'mannschaft':
+                athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], score2=row[11], ranking=row[7])
+            else:
+                athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], ranking=row[7])
             athlete_comp.save()
     except:
         context = read_settings_xml()
@@ -893,16 +1126,39 @@ def database_import(request):
         ) 
     
     try:
-        # Wertungen importieren
-        c.execute("SELECT e.Startnummer, e.DisziplinID, e.Punktzahl, t.WettkampfID FROM ergebnisse as e INNER JOIN teilnehmer as t ON e.Startnummer = t.Startnummer")
+        # Einzelwertungen importieren
+        if settings_dict['wk_type'] == 'mannschaft':
+            c.execute("SELECT e.Startnummer, e.DisziplinID, e.Punktzahl, m.WettkampfID, e.runde FROM ergebnisse as e INNER JOIN teilnehmer as t ON e.Startnummer = t.Startnummer INNER JOIN mannschaft as m ON t.MannschaftsId = m.StartnummerMannschaft")
+        else:
+            c.execute("SELECT e.Startnummer, e.DisziplinID, e.Punktzahl, t.WettkampfId, e.runde FROM ergebnisse as e INNER JOIN teilnehmer as t ON e.Startnummer = t.Startnummer")
         for row in c.fetchall():
             # Überprüfen, ob Athlet bereits existiert, um Fehler zu vermeiden
             if Athlete.objects.filter(sid=row[0]).exists():
-                grading = Grading(athlete_id=row[0], competition_id=row[3], discipline_id=row[1], score=row[2], kari1=0, awert=-1*row[2], ewert=0, dwert=0)
+                if row[4] is None:
+                    row = (row[0], row[1], row[2], row[3], 0)
+                grading = Grading(athlete_id=row[0], competition_id=row[3], discipline_id=row[1], score=row[2], kari1=0, awert=-1*row[2], ewert=0, dwert=0, day=row[4])
                 grading.save()
     except:
         context = read_settings_xml()
-        context['error_message'] = "Beim Importieren der Wertungen aus Datenbank 1 ist ein Fehler aufgetreten."
+        context['error_message'] = "Beim Importieren der Einzelwertungen aus Datenbank 1 ist ein Fehler aufgetreten."
+        return render(
+            request,
+            "grading/database.html",
+            context,
+        )
+    
+    try:
+        if settings_dict['wk_type'] == 'mannschaft':
+            # Mannschaftswertungen importieren
+            c.execute("SELECT mg.Startnummer, mg.DisziplinID, mg.Punktzahl, mg.Runde, m.WettkampfID FROM ergebnissemannschaft as mg INNER JOIN mannschaft as m ON mg.Startnummer = m.StartnummerMannschaft")
+            for row in c.fetchall():
+                # Überprüfen, ob Mannschaft bereits existiert, um Fehler zu vermeiden
+                if Mannschaft.objects.filter(mid=row[0]).exists():
+                    mannschaft_grading = Mannschaft_Grading(mannschaft_id=row[0], competition_id=row[4], discipline_id=row[1], score=row[2], day=row[3])
+                    mannschaft_grading.save()
+    except:
+        context = read_settings_xml()
+        context['error_message'] = "Beim Importieren der Mannschaftswertungen aus Datenbank 1 ist ein Fehler aufgetreten."
         return render(
             request,
             "grading/database.html",
@@ -954,10 +1210,43 @@ def database_import(request):
                 "grading/database.html",
                 context,
             )
+        
+        try:
+            if settings_dict['wk_type'] == 'mannschaft':
+                # Mannschaften importieren
+                c.execute("SELECT m.StartnummerMannschaft, v.VereinsName, m.MannschaftsNr, m.Abzug, m.Endpunktzahl, m.Rang, m.Tagespunktzahl1, m.Tagespunktzahl2, m.WettkampfId FROM mannschaft as m INNER JOIN vereine as v ON m.Verein=v.VereinsNummer ORDER BY m.StartnummerMannschaft")
+                for row in c.fetchall():
+                    # Überprüfen, ob Mannschaft bereits existiert                
+                    if Mannschaft.objects.filter(mid=row[0]).exists():
+                        context = read_settings_xml()
+                        context['error_message'] = f"Mannschaft mit ID {row[0]} existiert bereits. Bitte überprüfen Sie die Datenbank 2 auf Duplikate oder Inkonsistenzen."
+                        return render(
+                            request,
+                            "grading/database.html",
+                            context,
+                        )
+                    else:
+                        mannschaft = Mannschaft(mid=row[0], verein=row[1], mannschaftsnr=row[2])
+                        mannschaft.save()
+                        if row[3] is None:
+                            row = (row[0], row[1], row[2], 0, row[4], row[5], row[6], row[7], row[8])
+                        mannschaft_comp = Mannschaft_Comp(mannschaft_id=row[0], competition_id=row[8], abzug=row[3], score=row[4], ranking=row[5], score_day1=row[6], score_day2=row[7])
+                        mannschaft_comp.save()
+        except:
+            context = read_settings_xml()
+            context['error_message'] = "Beim Importieren der Mannschaften aus Datenbank 2 ist ein Fehler aufgetreten."
+            return render(
+                request,
+                "grading/database.html",
+                context,
+            )
 
         try:
             # Athleten und Athleten-Wettbewerbe-Zuordnung importieren
-            c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang, t.Riege FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
+            if settings_dict['wk_type'] == 'mannschaft':
+                c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, m.WettkampfID, t.Gesamtpunktzahl, t.Rang, t.Riege, t.MannschaftsId, t.ak, t.Gesamtpunktzahl2 FROM teilnehmer as t INNER JOIN mannschaft as m ON t.MannschaftsId=m.StartnummerMannschaft INNER JOIN vereine as v ON m.Verein=v.VereinsNummer ORDER BY t.Startnummer")
+            else:
+                c.execute("SELECT t.Startnummer, t.Vorname, t.Name, t.Jahrgang, v.VereinsName, t.WettkampfId, t.Gesamtpunktzahl, t.Rang, t.Riege, t.ak FROM teilnehmer as t INNER JOIN vereine as v ON t.Verein=v.VereinsNummer ORDER BY t.Startnummer")
             for row in c.fetchall():
                 # Überprüfen, ob Athlet bereits existiert
                 if Athlete.objects.filter(sid=row[0]).exists():
@@ -968,10 +1257,16 @@ def database_import(request):
                         "grading/database.html",
                         context,
                     )
-                else:   
-                    athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=2, riege=row[8])
+                else:  
+                    if settings_dict['wk_type'] == 'mannschaft':
+                        athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1, riege=row[8], mannschaft_id=row[9], ak=row[10])
+                    else: 
+                        athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=2, riege=row[8], ak=row[9])
                     athlete.save()
-                    athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], ranking=row[7])
+                    if settings_dict['wk_type'] == 'mannschaft':
+                        athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], score2=row[11], ranking=row[7])
+                    else:
+                        athlete_comp = Athlete_Comp(athlete_id=row[0], competition_id=row[5], score=row[6], ranking=row[7])
                     athlete_comp.save()
         except:
             context = read_settings_xml()
@@ -981,7 +1276,7 @@ def database_import(request):
                 "grading/database.html",
                 context,
             ) 
-        
+
         try:
             # Disziplinen importieren
             c.execute("SELECT DisziplinID, DisziplinName, Wertungsverfahren, Sekunden FROM disziplinen")
@@ -1068,16 +1363,39 @@ def database_import(request):
             )
         
         try:
-            # Wertungen importieren
-            c.execute("SELECT e.Startnummer, e.DisziplinID, e.Punktzahl, t.WettkampfID FROM ergebnisse as e INNER JOIN teilnehmer as t ON e.Startnummer = t.Startnummer")
+            # Einzelwertungen importieren
+            if settings_dict['wk_type'] == 'mannschaft':
+                c.execute("SELECT e.Startnummer, e.DisziplinID, e.Punktzahl, m.WettkampfID, e.runde FROM ergebnisse as e INNER JOIN teilnehmer as t ON e.Startnummer = t.Startnummer INNER JOIN mannschaft as m ON t.MannschaftsId = m.StartnummerMannschaft")
+            else:
+                c.execute("SELECT e.Startnummer, e.DisziplinID, e.Punktzahl, t.WettkampfID, e.runde FROM ergebnisse as e INNER JOIN teilnehmer as t ON e.Startnummer = t.Startnummer")
             for row in c.fetchall():
                 # Überprüfen, ob Athlet bereits existiert, um Fehler zu vermeiden
                 if Athlete.objects.filter(sid=row[0]).exists():
-                    grading = Grading(athlete_id=row[0], competition_id=row[3], discipline_id=row[1], score=row[2], kari1=0, awert=-1*row[2])
+                    if row[4] is None:
+                        row = (row[0], row[1], row[2], row[3], 0)
+                    grading = Grading(athlete_id=row[0], competition_id=row[3], discipline_id=row[1], score=row[2], kari1=0, awert=-1*row[2], runde=row[4])
                     grading.save()
         except:
             context = read_settings_xml()
-            context['error_message'] = "Beim Importieren der Wertungen aus Datenbank 2 ist ein Fehler aufgetreten."
+            context['error_message'] = "Beim Importieren der EinzelWertungen aus Datenbank 2 ist ein Fehler aufgetreten."
+            return render(
+                request,
+                "grading/database.html",
+                context,
+            )
+        
+        try:
+            if settings_dict['wk_type'] == 'mannschaft':
+                # Mannschaftswertungen importieren
+                c.execute("SELECT mg.Startnummer, mg.DisziplinID, mg.Punktzahl, mg.Runde, m.WettkampfID FROM ergebnissemannschaft as mg INNER JOIN mannschaft as m ON mg.Startnummer = m.StartnummerMannschaft")
+                for row in c.fetchall():
+                    # Überprüfen, ob Mannschaft bereits existiert, um Fehler zu vermeiden
+                    if Mannschaft.objects.filter(mid=row[0]).exists():
+                        mannschaft_grading = Mannschaft_Grading(mannschaft_id=row[0], competition_id=row[4], discipline_id=row[1], score=row[2], day=row[3])
+                        mannschaft_grading.save()
+        except:
+            context = read_settings_xml()
+            context['error_message'] = "Beim Importieren der Mannschaftswertungen aus Datenbank 2 ist ein Fehler aufgetreten."
             return render(
                 request,
                 "grading/database.html",

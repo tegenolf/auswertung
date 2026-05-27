@@ -5,6 +5,19 @@
 {% endif %}
 
 {% if ranking_list %}
+    {%if settings_dict.wk_type == 'mannschaft' %}
+    <div id="ranking-list-container">
+        <table class="no_border">
+            <tr><th>Rang</th><th>Mannschaft</th><th>Tagespunktzahl</th></th><th>Punktzahl</th></tr>
+            {% for ranking in ranking_list %}
+                 <tr><td>{{ ranking.ranking}}</td><td>{{ ranking.mannschaft.verein }}{% if ranking.mannschaft.mannschaftsnr %} {{ ranking.mannschaft.mannschaftsnr }}{% endif %} (Startnr. {{ ranking.mannschaft.mid }})
+                    <br />&nbsp;&nbsp;<span class="small">
+                        {% for dis in ranking.disciplines %}{{ dis.discipline.bezeichnung }}: {{dis.score}}{% if not forloop.last %}, {% endif %}{% endfor %}
+                    </span></td><td>{% if settings_dict.runde == "1" %}{{ ranking.score_day1 }}{% if ranking.score_day2 > 0 %}<br><span class="small">(Runde 2: {{ ranking.score_day2 }})</span>{% endif %}{% elif settings_dict.runde == "2" %}{{ ranking.score_day2 }}<br><span class="small">(Runde 1: {{ ranking.score_day1 }})</span>{% endif %}</td><td>{{ ranking.score }}</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% else %}
     <div id="ranking-list-container">
         <table class="no_border">
             <tr><th>Rang</th><th>SportlerIn</th><th>Punktzahl</th></tr>
@@ -16,6 +29,7 @@
             {% endfor %}
         </table>
     </div>
-    {% else %}
-        <p>In diesem Wettkampf sind keine Ergebnisse vorhanden.</p>
     {% endif %}
+{% else %}
+    <p>In diesem Wettkampf sind keine Ergebnisse vorhanden.</p>
+{% endif %}

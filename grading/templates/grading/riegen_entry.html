@@ -1,19 +1,41 @@
-{% if selected_riege %}
-    <h2>Riege {{ selected_riege }}</h2>
+{% if settings_dict.wk_type == 'mannschaft' %}
+    {% if selected_riege_data %}
+    <h2>{{ selected_riege_data.mannschaft.verein }} {% if selected_riege_data.mannschaft.mannschaftsnr > 0 %} {{ selected_riege_data.mannschaft.mannschaftsnr }}{% endif %} (Startnr. {{selected_riege}}) </h2>
+    <p>WK {{ selected_riege_data.competition.cid }}: {{ selected_riege_data.competition.name }}</p>
+    {% if riegen_list %}
+        <div id="riegen-list-container">
+            <table class="no_border">
+                <tr><th>SportlerIn</th><th>Disziplinen</th></tr>
+                {% for entry in riegen_list %}
+                     <tr><td>{{ entry.athlete.vorname }} {{ entry.athlete.nachname }}</td>
+                        <td>{% for dis in entry.disciplines %}<div class="discipline_box {% if dis.allowed_to_grade %} {% if dis.score > 0 %} graded {% else %} not_graded {% endif %}{% endif %}">{% if dis.allowed_to_grade %}<a href="{% url 'grading:grade' entry.athlete.sid %}?cid={{entry.competition.cid}}&did={{dis.discipline.did}}">{% endif %}{{ dis.discipline.bezeichnung }}{% if dis.score > 0 %}<br /> <span class="small">({{dis.score}})</span>{% endif %}{% if dis.allowed_to_grade %}</a>{% endif %}</div>{% endfor %}</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% else %}
+        <p>In dieser Mannschaft sind keine SportlerInnen vorhanden.</p>
+    {% endif %}
+    {% else %}
+        <p>Die ausgewählte Mannschaft existiert nicht oder es liegt keine Berechtigung für diese Mannschaft vor. Bitte eine andere Mannschaft auswählen.</p>
+    {% endif %}
 {% else %}
-    <p>Bitte eine Riege auswählen, um die SportlerInnnen anzuzeigen.</p>
-{% endif %}
+    {% if selected_riege %}
+        <h2>Riege {{ selected_riege }}</h2>
+    {% else %}
+        <p>Bitte eine Riege auswählen, um die SportlerInnnen anzuzeigen.</p>
+    {% endif %}
 
-{% if riegen_list %}
-    <div id="riegen-list-container">
-        <table class="no_border">
-            <tr><th>Startnr.</th><th>SportlerIn</th><th>WK</th><th>Disziplinen</th></tr>
-            {% for entry in riegen_list %}
-                 <tr><td>{{ entry.athlete.sid}}</td><td>{{ entry.athlete.vorname }} {{ entry.athlete.nachname }}<br />&nbsp;&nbsp;<span class="small">({{ entry.athlete.geburtsjahr }} - {{ entry.athlete.verein }})</span></td>
-                    <td>{{ entry.competition.cid }}</td><td>{% for dis in entry.disciplines %}<div class="discipline_box {% if dis.allowed_to_grade %} {% if dis.score > 0 %} graded {% else %} not_graded {% endif %}{% endif %}">{% if dis.allowed_to_grade %}<a href="{% url 'grading:grade' entry.athlete.sid %}?cid={{entry.competition.cid}}&did={{dis.discipline.did}}">{% endif %}{{ dis.discipline.bezeichnung }}{% if dis.score > 0 %}<br /> <span class="small">({{dis.score}})</span>{% endif %}{% if dis.allowed_to_grade %}</a>{% endif %}</div>{% endfor %}</td></tr>
-            {% endfor %}
-        </table>
-    </div>
+    {% if riegen_list %}
+        <div id="riegen-list-container">
+            <table class="no_border">
+                <tr><th>Startnr.</th><th>SportlerIn</th><th>WK</th><th>Disziplinen</th></tr>
+                {% for entry in riegen_list %}
+                     <tr><td>{{ entry.athlete.sid}}</td><td>{{ entry.athlete.vorname }} {{ entry.athlete.nachname }}<br />&nbsp;&nbsp;<span class="small">({{ entry.athlete.geburtsjahr }} - {{ entry.athlete.verein }})</span></td>
+                        <td>{{ entry.competition.cid }}</td><td>{% for dis in entry.disciplines %}<div class="discipline_box {% if dis.allowed_to_grade %} {% if dis.score > 0 %} graded {% else %} not_graded {% endif %}{% endif %}">{% if dis.allowed_to_grade %}<a href="{% url 'grading:grade' entry.athlete.sid %}?cid={{entry.competition.cid}}&did={{dis.discipline.did}}">{% endif %}{{ dis.discipline.bezeichnung }}{% if dis.score > 0 %}<br /> <span class="small">({{dis.score}})</span>{% endif %}{% if dis.allowed_to_grade %}</a>{% endif %}</div>{% endfor %}</td></tr>
+                {% endfor %}
+            </table>
+        </div>
     {% else %}
         <p>In dieser Riege sind keine SportlerInnen vorhanden.</p>
     {% endif %}
+{% endif %}

@@ -10,6 +10,9 @@ from django.contrib.auth.models import User
 #  geburtsjahr - Integer
 #  verein - String,
 #  dbid - Integert (optional, für die Zuordnung zwischen zwei Datenbanken in Didis Software)
+# riege - Integer (optional, für die Zuordnung der Athleten zu Riegen
+# mannschaft - ForeignKey zu Mannschaft (optional, alternative Möglichkeit zur Zuordnung der Athleten zu Mannschaften)
+# ak - Boolean (optional, für die Kennzeichnung von Athleten, die außer Konkurenz an einem Wettkampf teilnehmen)
 class Athlete(models.Model):
     sid = models.IntegerField(primary_key=True)
     vorname = models.CharField(max_length=100)
@@ -18,6 +21,8 @@ class Athlete(models.Model):
     verein = models.CharField(max_length=100)
     dbid = models.IntegerField(null=True, blank=True)
     riege = models.IntegerField(null=True, blank=True) # optionales Feld für die Riege des Athleten
+    mannschaft = models.ForeignKey('Mannschaft', on_delete=models.SET_NULL, null=True, blank=True) # alternative Möglichkeit zur Zuordnung der Athleten zu Mannschaften
+    ak = models.BooleanField(default=False) # optionales Feld für die Kennzeichnung von Athleten, die außer Konkurenz an einem Wettkampf teilnehmen
 
     def __str__(self):
         return f"{self.vorname} {self.nachname} ({self.geburtsjahr}), {self.verein}"
@@ -83,6 +88,7 @@ class Athlete_Comp(models.Model):
     athlete = models.ForeignKey(Athlete, on_delete=models.CASCADE)
     competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
     score = models.FloatField(null=True, blank=True)
+    score2 = models.FloatField(null=True, blank=True) # Punktzahl des Athleten am zweiten Wettkampftag (falls es einen zweiten Wettkampftag gibt)
     ranking = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
@@ -102,6 +108,7 @@ class Grading(models.Model):
     ewert = models.FloatField()
     dwert = models.FloatField()
     score = models.FloatField()
+    day = models.IntegerField(default=0) # Tag der Bewertung, z.B. 1 für den ersten Wettkampftag, 2 für den zweiten Wettkampftag (falls es einen zweiten Wettkampftag gibt)
 
     def __str__(self):
         return f"{self.athlete} - {self.discipline}: {self.score} in {self.competition}"
@@ -128,3 +135,48 @@ class Logs(models.Model):
     def __str__(self):
         return f"{self.log_date} - {self.user}: {self.log_text}"
     
+## Mannschaft: Hier werden die Mannschaften gespeichert, falls die Funktion der Mannschaftswertung gewünscht ist.
+class Mannschaft(models.Model):
+    mid = models.IntegerField(primary_key=True)
+    verein = models.CharField(max_length=100)
+    mannschaftsnr = models.IntegerField()
+
+    def __str__(self):
+        return f"{self.verein} - Mannschaft {self.mannschaftsnr}"
+    
+    def allowed_to_grade(self, user_id):
+        user = User.objects.get(id=user_id)
+        if user.is_superuser or user.is_staff:
+            return True
+        competitions = Mannschaft_Comp.objects.filter(mannschaft__mid=self.mid).values_list('competition', flat=True)
+        for comp_id in competitions:
+            comp_dis_list = Comp_Dis.objects.filter(competition__cid=comp_id)
+            for comp_dis in comp_dis_list:
+                if Permission.objects.filter(user__username=user.username, comp_dis=comp_dis).exists():
+                    return True
+        return False
+
+## Mannschaft_Comp: Verknüpfungstabelle zwischen Mannschaft und Competition, da eine Mannschaft an mehreren Wettkämpfen teilnehmen kann und ein Wettkampf mehrere Mannschaften haben kann.
+# Hier werden auch die Gesamtpunktzahl und die Platzierung der Mannschaft in diesem Wettkampf gespeichert, sowie eventuelle Abzüge für die Mannschaftswertung und die Punktzahlen der Mannschaft an den einzelnen Wettkampftagen, falls es einen zweiten Wettkampftag gibt.   
+class Mannschaft_Comp(models.Model):
+    mannschaft = models.ForeignKey(Mannschaft, on_delete=models.CASCADE)
+    competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
+    abzug = models.FloatField(default=0) # Abzüge für die Mannschaftswertung
+    score_day1 = models.FloatField(null=True, blank=True) # Punktzahl der Mannschaft am ersten Wettkampftag
+    score_day2 = models.FloatField(null=True, blank=True) # Punktzahl der Mannschaft am zweiten Wettkampftag (falls es einen zweiten Wettkampftag gibt)
+    score = models.FloatField(null=True, blank=True)
+    ranking = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.mannschaft} in {self.competition}"
+
+## Mannschaft_Grading: Hier werden die Bewertungen der Mannschaften in den einzelnen Disziplinen und Wettkämpfen gespeichert, falls die Funktion der Mannschaftswertung gewünscht ist.    
+class Mannschaft_Grading(models.Model):
+    mannschaft = models.ForeignKey(Mannschaft, on_delete=models.CASCADE)
+    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
+    competition = models.ForeignKey(Competition, on_delete=models.CASCADE)
+    score = models.FloatField()
+    day = models.IntegerField(default=0) # Tag der Bewertung, z.B. 1 für den ersten Wettkampftag, 2 für den zweiten Wettkampftag (falls es einen zweiten Wettkampftag gibt)
+
+    def __str__(self):
+        return f"{self.mannschaft} - {self.discipline}: {self.score} in {self.competition}"

@@ -1,6 +1,7 @@
 <settings>
     <wk_title>Ger&#228;tturnen-Einzelmeisterschaften weiblich 2026</wk_title>
     <wk_type>einzel</wk_type>
+	<runde>0</runde>
     <database1>
         <name>gt_einzel_w2026</name>
         <user>root</user>
