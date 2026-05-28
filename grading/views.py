@@ -79,21 +79,39 @@ class IndexView(LoginRequiredMixin, generic.ListView):
 
     def get_queryset(self):
         """Return a list of athletes."""
-        return Athlete.objects.order_by("sid")
+        settings_dict = read_settings_xml()
+        if settings_dict['wk_type'] == 'mannschaft':
+            return Competition.objects.order_by("cid")
+        else:
+            return Athlete.objects.order_by("sid")
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        athlete_list = context['athletes_list']
-        allowed_athletes = []
-        not_allowed_athletes = []
-        for athlete in athlete_list:
-            if athlete.allowed_to_grade(self.request.user.id):
-                allowed_athletes.append(athlete)
-            else:
-                not_allowed_athletes.append(athlete)
-        context['athletes_list'] = allowed_athletes
-        context['not_allowed_athletes'] = not_allowed_athletes
         context['settings_dict'] = read_settings_xml()
+        if context['settings_dict']['wk_type'] == 'mannschaft':
+            comp_list = context['athletes_list']
+            allowed_comps = []
+            not_allowed_comps = []
+            for comp in comp_list:
+                # alle Mannschaften des Wettkampfs
+                mannschaften = Mannschaft.objects.filter(mannschaft_comp__competition_id=comp.cid).order_by("mid")
+                if comp.allowed_to_grade(self.request.user.id):
+                    allowed_comps.append({"competition":comp, "mannschaften": mannschaften})
+                else:
+                    not_allowed_comps.append({"competition":comp, "mannschaften": mannschaften})
+            context['athletes_list'] = allowed_comps
+            context['not_allowed_athletes'] = not_allowed_comps
+        else:
+            athlete_list = context['athletes_list']
+            allowed_athletes = []
+            not_allowed_athletes = []
+            for athlete in athlete_list:
+                if athlete.allowed_to_grade(self.request.user.id):
+                    allowed_athletes.append(athlete)
+                else:
+                    not_allowed_athletes.append(athlete)
+            context['athletes_list'] = allowed_athletes
+            context['not_allowed_athletes'] = not_allowed_athletes
         return context
 
 ## Die Riegen-Seite zeigt eine Liste aller Athleten an, in Tabs sortiert nach Riegen.
@@ -114,8 +132,9 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
         #    return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
         else:
             if settings_dict['wk_type'] == 'mannschaft':
-                id = Athlete.objects.filter(mannschaft__isnull=False).all().aggregate(Min('mannschaft'))['mannschaft__min'] if Athlete.objects.filter(mannschaft__isnull=False).exists() else None
-                result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+                allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(self.request.user.id)]
+                #id = Athlete.objects.filter(mannschaft__isnull=False).all().aggregate(Min('mannschaft'))['mannschaft__min'] if Athlete.objects.filter(mannschaft__isnull=False).exists() else None
+                result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=allowed_mids[0]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
             else:
                 id = Athlete.objects.filter(riege__isnull=False).all().aggregate(Min('riege'))['riege__min'] if Athlete.objects.filter(riege__isnull=False).exists() else None
                 result = Athlete_Comp.objects.filter(athlete__riege=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
@@ -144,21 +163,20 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
                     d.score = grading.score
         context['competitions'] = Competition.objects.all().order_by("cid")
         if context['settings_dict']['wk_type'] == 'mannschaft':
-            allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.all() if mannschaft.allowed_to_grade(self.request.user.id)]
+            allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(self.request.user.id)]
             context['riegen'] = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
-            #context['riegen'] = allowed_mids#Athlete.objects.filter(mannschaft__isnull=False).values_list('mannschaft', flat=True).distinct().order_by('mannschaft')
-            print(type(context['riegen'][0]))
         else:
             context['riegen'] = Athlete.objects.filter(riege__isnull=False).values_list('riege', flat=True).distinct().order_by('riege')
         if self.request.GET.get('riege'):
             context['selected_riege'] = self.request.GET.get('riege')
         else:
             context['selected_riege'] = context['riegen'].first() if context['riegen'] else None
+            print("Ausgewählte Riege:", context['selected_riege'])
         if context['settings_dict']['wk_type'] == 'mannschaft' and context['selected_riege']:
-            #context['selected_riege_data'] = Mannschaft.objects.get(mid=context['selected_riege'])
             context['selected_riege_data'] = Mannschaft_Comp.objects.filter(mannschaft_id=context['selected_riege']).select_related("mannschaft", "competition").first()
             if not context['selected_riege_data'].mannschaft.allowed_to_grade(self.request.user.id):
                 context['selected_riege_data'] = None
+            print(context['selected_riege_data'])
         return context
     
     def get_template_names(self):

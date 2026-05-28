@@ -123,14 +123,14 @@
         {% if previous %}
         function backToPreviousAthlete() {
             // Redirect to the last athelete's page
-            const previousAthleteUrl = "{% url 'grading:grade' previous.sid %}";
+            const previousAthleteUrl = "{% url 'grading:grade' previous.sid %}?cid={{ competition.cid }}&did={{ discipline.did }}";
             window.location.href = previousAthleteUrl;
         }
         {% endif %}
         {% if next %}
         function toNextAthlete() {
             // Redirect to the next athelete's page
-            const nextAthleteUrl = "{% url 'grading:grade' next.sid %}";
+            const nextAthleteUrl = "{% url 'grading:grade' next.sid %}?cid={{ competition.cid }}&did={{ discipline.did }}";
             window.location.href = nextAthleteUrl;
         }
         {% endif %}
@@ -260,7 +260,7 @@
         function backToPreviousAthlete() {
             if (warnBeforeLeaving()) {
                 // Redirect to the previous athelete's page
-                const previousAthleteUrl = "{% url 'grading:grade' previous.sid %}";
+                const previousAthleteUrl = "{% url 'grading:grade' previous.sid %}?cid={{ competition.cid }}&did={{ discipline.did }}";
                 window.location.href = previousAthleteUrl;
             }
         }
@@ -269,7 +269,7 @@
         function toNextAthlete() {
             if (warnBeforeLeaving()) {
                 // Redirect to the next athelete's page
-                const nextAthleteUrl = "{% url 'grading:grade' next.sid %}";
+                const nextAthleteUrl = "{% url 'grading:grade' next.sid %}?cid={{ competition.cid }}&did={{ discipline.did }}";
                 window.location.href = nextAthleteUrl;
             }
         }

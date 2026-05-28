@@ -64,6 +64,16 @@ class Competition(models.Model):
 
     def __str__(self):
         return f"{self.name}"
+    
+    def allowed_to_grade(self, user_id):
+        user = User.objects.get(id=user_id)
+        if user.is_superuser or user.is_staff:
+            return True
+        comp_dis_list = Comp_Dis.objects.filter(competition__cid=self.cid)
+        for comp_dis in comp_dis_list:
+            if Permission.objects.filter(user__username=user.username, comp_dis=comp_dis).exists():
+                return True
+        return False
 
 ## Comp_Dis: Verknüpfungstabelle zwischen Competition und Discipline, da ein Wettkampf mehrere Disziplinen haben kann und eine Disziplin in mehreren Wettkämpfen vorkommen kann    
 class Comp_Dis(models.Model):
