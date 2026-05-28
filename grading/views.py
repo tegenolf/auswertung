@@ -381,8 +381,25 @@ class AllResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         for entry in context['ranking_list']:
             if context['settings_dict']['wk_type'] == 'mannschaft':
                 if context['settings_dict']['runde'] and int(context['settings_dict']['runde']) > 0:
-                    entry.disciplines = Mannschaft_Grading.objects.filter(mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid, day=int(context['settings_dict']['runde'])).order_by("discipline_id").select_related("discipline")
-                    #entry.athletes = Grading.objects.filter(athlete__mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid, day=int(context['settings_dict']['runde'])).order_by("athlete_id").select_related("athlete")
+                    entry.disciplines = Discipline.objects.filter(comp_dis__competition_id=entry.competition.cid).order_by("did")
+                    entry.athletes = Athlete.objects.filter(mannschaft_id=entry.mannschaft.mid).order_by("sid")
+                    entry.athletes_disciplines = []
+                    for athlete in entry.athletes:
+                        athlete_dict = {'vorname': athlete.vorname, 'nachname': athlete.nachname, 'disciplines': []}
+                        for discipline in entry.disciplines:
+                            grading = Grading.objects.filter(athlete_id=athlete.sid, competition_id=entry.competition.cid, discipline_id=discipline.did, day=int(context['settings_dict']['runde'])).first()
+                            if grading is not None:
+                                athlete_dict['disciplines'].append({'discipline': discipline.bezeichnung, 'score': grading.score})
+                            else:
+                                athlete_dict['disciplines'].append({'discipline': discipline.bezeichnung, 'score': None})
+                        entry.athletes_disciplines.append(athlete_dict)
+                    entry.team_scores = []
+                    for discipline in entry.disciplines:
+                        team_score = Mannschaft_Grading.objects.filter(mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid, discipline_id=discipline.did, day=int(context['settings_dict']['runde'])).first()
+                        if team_score is not None:
+                            entry.team_scores.append({'discipline': discipline.bezeichnung, 'score': team_score.score})
+                        else:
+                            entry.team_scores.append({'discipline': discipline.bezeichnung, 'score': None})
                 else:
                     entry.disciplines = Mannschaft_Grading.objects.filter(mannschaft_id=entry.mannschaft.mid, competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
             else:
@@ -657,6 +674,10 @@ def save_grade(request, athlete_id):
                             "error_message": f"Die Runden-Einstellung ist falsch. Die Mannschaftswertung kann nicht gespeichert werden.",
                         },
                     )
+                if mannschaft_comp.score_day1 is None:
+                    mannschaft_comp.score_day1 = 0
+                if mannschaft_comp.score_day2 is None:
+                    mannschaft_comp.score_day2 = 0
                 mannschaft_comp.score = mannschaft_comp.score_day1 + mannschaft_comp.score_day2
             except Mannschaft_Comp.DoesNotExist:
                 if int(settings_dict['runde']) is None or int(settings_dict['runde']) < 2:
