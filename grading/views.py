@@ -1163,21 +1163,20 @@ def database_import(request):
             context,
         ) 
     
-    #try:
+    try:
         # Wettbewerbe-Disziplinen importieren
-    c.execute("SELECT dz.WettkampfID, dz.DisziplinID, d.MaxPunktzahl FROM disziplinzuordnung as dz INNER JOIN disziplinen as d ON dz.DisziplinID=d.DisziplinID")
-    for row in c.fetchall():
-        print(row)
-        comp_dis = Comp_Dis(competition_id=row[0], discipline_id=row[1], max_score=row[2])
-        comp_dis.save()
-    #except:
-    #    context = read_settings_xml()
-    #    context['error_message'] = "Beim Importieren der Disziplinen-Zuordnung aus Datenbank 1 ist ein Fehler aufgetreten."
-    #    return render(
-    #        request,
-    #        "grading/database.html",
-    #        context,
-    #    ) 
+        c.execute("SELECT dz.WettkampfID, dz.DisziplinID, d.MaxPunktzahl FROM disziplinzuordnung as dz INNER JOIN disziplinen as d ON dz.DisziplinID=d.DisziplinID")
+        for row in c.fetchall():
+            comp_dis = Comp_Dis(competition_id=row[0], discipline_id=row[1], max_score=row[2])
+            comp_dis.save()
+    except:
+        context = read_settings_xml()
+        context['error_message'] = "Beim Importieren der Disziplinen-Zuordnung aus Datenbank 1 ist ein Fehler aufgetreten."
+        return render(
+            request,
+            "grading/database.html",
+            context,
+        ) 
     
     try:
         # Einzelwertungen importieren
