@@ -355,6 +355,7 @@ class ResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.DetailView):
         if context['settings_dict']['wk_type'] == 'mannschaft':
             context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,mannschaft=self.object.mannschaft).order_by("sid").first()
             context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,mannschaft=self.object.mannschaft).order_by("-sid").first()
+            print(context['next'], context['previous'])
         else:
             context['next'] = Athlete.objects.filter(sid__gt=self.object.sid,riege=self.object.riege).order_by("sid").first()
             context['previous'] = Athlete.objects.filter(sid__lt=self.object.sid,riege=self.object.riege).order_by("-sid").first()
@@ -817,7 +818,13 @@ def save_grade(request, athlete_id):
                 "settings_dict": read_settings_xml(),
                 "error_message": "Fehlende oder ungültige Eingabe.",
             },
-        )    
+        )
+    if settings_dict['wk_type'] == 'mannschaft':
+        next = Athlete.objects.filter(sid__gt=athlete_id,mannschaft=athlete_comp.athlete.mannschaft).order_by("sid").first()
+        previous = Athlete.objects.filter(sid__lt=athlete_id,mannschaft=athlete_comp.athlete.mannschaft).order_by("-sid").first()
+    else:
+        next = Athlete.objects.filter(sid__gt=athlete_id,riege=athlete_comp.athlete.riege).order_by("sid").first()
+        previous = Athlete.objects.filter(sid__lt=athlete_id,riege=athlete_comp.athlete.riege).order_by("-sid").first()    
     return render(
             request,
             "grading/grade.html",
@@ -826,7 +833,9 @@ def save_grade(request, athlete_id):
                 "competition": get_object_or_404(Competition, pk=request.POST.get("cid")),
                 "discipline": get_object_or_404(Discipline, pk=request.POST.get("did")),
                 "initial_grading": grading,
-                "settings_dict": read_settings_xml(),
+                "settings_dict": settings_dict,
+                "next": next,
+                "previous": previous,
                 "success_message": "Eingabe gespeichert.",
                 "not_changeable": True,
             },
