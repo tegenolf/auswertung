@@ -16,6 +16,8 @@
         <div id="tabs-content">
             {% include 'grading/riegen_entry.html' %}
         </div>
+    {% else %}
+        <p>Keine {% if settings_dict.wk_type == 'mannschaft' %}Mannschaften{% else %}Riegen{% endif %} vorhanden, die bewertet werden dürfen.</p>
     {% endif %}
     
 {% endblock content %}

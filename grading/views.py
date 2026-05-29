@@ -134,7 +134,10 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
             if settings_dict['wk_type'] == 'mannschaft':
                 allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(self.request.user.id)]
                 #id = Athlete.objects.filter(mannschaft__isnull=False).all().aggregate(Min('mannschaft'))['mannschaft__min'] if Athlete.objects.filter(mannschaft__isnull=False).exists() else None
-                result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=allowed_mids[0]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+                if len(allowed_mids) > 0:
+                    result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=allowed_mids[0]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+                else:
+                    return None
             else:
                 id = Athlete.objects.filter(riege__isnull=False).all().aggregate(Min('riege'))['riege__min'] if Athlete.objects.filter(riege__isnull=False).exists() else None
                 result = Athlete_Comp.objects.filter(athlete__riege=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
@@ -147,34 +150,38 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['settings_dict'] = read_settings_xml()
-        for entry in context['riegen_list']:
-            # alle Disziplinen des Wettkampfs
-            entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
-            # bereits vorhandene Wertungen
-            entry.grading = []
-            for d in entry.disciplines:
-                d.score = None
-                d.allowed_to_grade = d.allowed_to_grade(self.request.user.id)
-                if int(context['settings_dict']['runde']) > 0:
-                    grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(context['settings_dict']['runde'])).first()
-                else:
-                    grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
-                if grading is not None and grading.score > 0:
-                    d.score = grading.score
-        context['competitions'] = Competition.objects.all().order_by("cid")
-        if context['settings_dict']['wk_type'] == 'mannschaft':
-            allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(self.request.user.id)]
-            context['riegen'] = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+        if context['riegen_list'] is not None:
+            for entry in context['riegen_list']:
+                # alle Disziplinen des Wettkampfs
+                entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+                # bereits vorhandene Wertungen
+                entry.grading = []
+                for d in entry.disciplines:
+                    d.score = None
+                    d.allowed_to_grade = d.allowed_to_grade(self.request.user.id)
+                    if int(context['settings_dict']['runde']) > 0:
+                        grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(context['settings_dict']['runde'])).first()
+                    else:
+                        grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                    if grading is not None and grading.score > 0:
+                        d.score = grading.score
+            context['competitions'] = Competition.objects.all().order_by("cid")
+            if context['settings_dict']['wk_type'] == 'mannschaft':
+                allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(self.request.user.id)]
+                context['riegen'] = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+            else:
+                context['riegen'] = Athlete.objects.filter(riege__isnull=False).values_list('riege', flat=True).distinct().order_by('riege')
+            if self.request.GET.get('riege'):
+                context['selected_riege'] = self.request.GET.get('riege')
+            else:
+                context['selected_riege'] = context['riegen'].first() if context['riegen'] else None
+            if context['settings_dict']['wk_type'] == 'mannschaft' and context['selected_riege']:
+                context['selected_riege_data'] = Mannschaft_Comp.objects.filter(mannschaft_id=context['selected_riege']).select_related("mannschaft", "competition").first()
+                if not context['selected_riege_data'].mannschaft.allowed_to_grade(self.request.user.id):
+                    context['selected_riege_data'] = None
         else:
-            context['riegen'] = Athlete.objects.filter(riege__isnull=False).values_list('riege', flat=True).distinct().order_by('riege')
-        if self.request.GET.get('riege'):
-            context['selected_riege'] = self.request.GET.get('riege')
-        else:
-            context['selected_riege'] = context['riegen'].first() if context['riegen'] else None
-        if context['settings_dict']['wk_type'] == 'mannschaft' and context['selected_riege']:
-            context['selected_riege_data'] = Mannschaft_Comp.objects.filter(mannschaft_id=context['selected_riege']).select_related("mannschaft", "competition").first()
-            if not context['selected_riege_data'].mannschaft.allowed_to_grade(self.request.user.id):
-                context['selected_riege_data'] = None
+            context['competitions'] = None
+            context['riegen'] = None
         return context
     
     def get_template_names(self):
@@ -1156,20 +1163,21 @@ def database_import(request):
             context,
         ) 
     
-    try:
+    #try:
         # Wettbewerbe-Disziplinen importieren
-        c.execute("SELECT dz.WettkampfID, dz.DisziplinID, d.MaxPunktzahl FROM disziplinzuordnung as dz INNER JOIN disziplinen as d ON dz.DisziplinID=d.DisziplinID")
-        for row in c.fetchall():
-            comp_dis = Comp_Dis(competition_id=row[0], discipline_id=row[1], max_score=row[2])
-            comp_dis.save()
-    except:
-        context = read_settings_xml()
-        context['error_message'] = "Beim Importieren der Disziplinen-Zuordnung aus Datenbank 1 ist ein Fehler aufgetreten."
-        return render(
-            request,
-            "grading/database.html",
-            context,
-        ) 
+    c.execute("SELECT dz.WettkampfID, dz.DisziplinID, d.MaxPunktzahl FROM disziplinzuordnung as dz INNER JOIN disziplinen as d ON dz.DisziplinID=d.DisziplinID")
+    for row in c.fetchall():
+        print(row)
+        comp_dis = Comp_Dis(competition_id=row[0], discipline_id=row[1], max_score=row[2])
+        comp_dis.save()
+    #except:
+    #    context = read_settings_xml()
+    #    context['error_message'] = "Beim Importieren der Disziplinen-Zuordnung aus Datenbank 1 ist ein Fehler aufgetreten."
+    #    return render(
+    #        request,
+    #        "grading/database.html",
+    #        context,
+    #    ) 
     
     try:
         # Einzelwertungen importieren
