@@ -171,12 +171,10 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
             context['selected_riege'] = self.request.GET.get('riege')
         else:
             context['selected_riege'] = context['riegen'].first() if context['riegen'] else None
-            print("Ausgewählte Riege:", context['selected_riege'])
         if context['settings_dict']['wk_type'] == 'mannschaft' and context['selected_riege']:
             context['selected_riege_data'] = Mannschaft_Comp.objects.filter(mannschaft_id=context['selected_riege']).select_related("mannschaft", "competition").first()
             if not context['selected_riege_data'].mannschaft.allowed_to_grade(self.request.user.id):
                 context['selected_riege_data'] = None
-            print(context['selected_riege_data'])
         return context
     
     def get_template_names(self):
@@ -784,7 +782,8 @@ def save_grade(request, athlete_id):
                         cursor.execute("INSERT INTO ergebnissemannschaft(Punktzahl,Startnummer,DisziplinID) VALUES(%s,%s,%s)",(team_score, athlete_comp.athlete.mannschaft.mid, request.POST["did"]))
 
                 # Update Gesamtwertung
-                cursor.execute("UPDATE mannschaft SET Tagespunktzahl1=%s AND Tagespunktzahl2=%s AND Endpunktzahl=%s WHERE StartnummerMannschaft=%s", (mannschaft_comp.score_day1,mannschaft_comp.score_day2,mannschaft_comp.score, athlete_comp.athlete.mannschaft.mid))
+                cursor.execute("UPDATE mannschaft SET Tagespunktzahl1=%s, Tagespunktzahl2=%s, Endpunktzahl=%s WHERE StartnummerMannschaft=%s", (mannschaft_comp.score_day1,mannschaft_comp.score_day2,mannschaft_comp.score, athlete_comp.athlete.mannschaft.mid))
+                print(cursor.rowcount)
 
                 # Update Ranking aller Mannschaften im gleichen Wettkampf
                 mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"])
@@ -845,7 +844,6 @@ def save_judges(request):
     for judge in judges_list:
         judge.permission_set.all().delete()
         for key, value in request.POST.items():
-            print(key + " : " + str(value))
             if value == "1":
                 key_split = key.split("_")
                 if len(key_split) == 2:
