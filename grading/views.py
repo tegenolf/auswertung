@@ -1565,27 +1565,27 @@ def database_reset_grading(request):
                 "grading/database.html",
                 context,
             )
-        #try:
+        try:
             # Ergebnisse aus Django-Datenbank laden, die in Datenbank i stehen sollten
-        grading = Grading.objects.filter(athlete__dbid=i)
+            grading = Grading.objects.filter(athlete__dbid=i)
             # Check, ob Ergebnisse in Didis Datenbank vorhanden sind und updaten, wenn nicht vorhanden oder 0
-        for g in grading:
-            c.execute("SELECT Punktzahl FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (g.athlete_id, g.discipline_id, g.day))
-            result = c.fetchone()
-            if result is None or result[0] == 0:
-                if result is not None:
-                    c.execute("DELETE FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (g.athlete_id, g.discipline_id, g.day))
-                c.execute("INSERT INTO ergebnisse(Startnummer,DisziplinID,Leistung,Punktzahl,Runde) VALUES(%s,%s,%s,%s,%s)",(g.athlete_id, g.discipline_id, g.score, g.score, g.day))
-        db.commit()
-        c.close()
-        #except:
-        #    context = read_settings_xml()
-        #    context['error_message'] = "Beim Übertragen der Ergebnisse in Datenbank " + str(i) + " ist ein Fehler aufgetreten."
-        #    return render(
-        #        request,
-        #        "grading/database.html",
-        #        context,
-        #    )
+            for g in grading:
+                c.execute("SELECT Punktzahl FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (g.athlete_id, g.discipline_id, g.day))
+                result = c.fetchone()
+                if result is None or result[0] == 0:
+                    if result is not None:
+                        c.execute("DELETE FROM ergebnisse WHERE Startnummer=%s AND DisziplinID=%s AND Runde=%s", (g.athlete_id, g.discipline_id, g.day))
+                    c.execute("INSERT INTO ergebnisse(Startnummer,DisziplinID,Leistung,Punktzahl,Runde) VALUES(%s,%s,%s,%s,%s)",(g.athlete_id, g.discipline_id, g.score, g.score, g.day))
+            db.commit()
+            c.close()
+        except:
+            context = read_settings_xml()
+            context['error_message'] = "Beim Übertragen der Ergebnisse in Datenbank " + str(i) + " ist ein Fehler aufgetreten."
+            return render(
+                request,
+                "grading/database.html",
+                context,
+            )
     context = read_settings_xml()
     context['success_message'] = "Übertragen der Ergebnisse erfolgreich."
     return render(
