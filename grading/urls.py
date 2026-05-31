@@ -49,5 +49,7 @@ urlpatterns = [
     path("download_file/", views.download_file, name="download_file"),
     # ex: /grading/database_clean_duplicates/ -> Funktion zum Bereinigen der Datenbank von Duplikaten
     path("clean_duplicates/", views.database_clean_duplicates, name="database_clean_duplicates"),
+    # ex: /grading/database_reset_grading/ -> Funktion zum Übertragen der Ergebnisse aus Django-Datenbank in Didis Datenbank
+    path("reset_grading/", views.database_reset_grading, name="database_reset_grading"),
 
 ]
