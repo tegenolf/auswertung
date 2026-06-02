@@ -150,6 +150,7 @@ class Mannschaft(models.Model):
     mid = models.IntegerField(primary_key=True)
     verein = models.CharField(max_length=100)
     mannschaftsnr = models.IntegerField()
+    dbid = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.verein} - Mannschaft {self.mannschaftsnr}"

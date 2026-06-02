@@ -724,7 +724,7 @@ def save_grade(request, athlete_id):
             mannschaft_comp.save()
 
             # Ranking aktualisieren
-            mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"]).order_by('-score')
+            mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschaft__dbid=request.POST["dbid"]).order_by('-score')
             ranking = 1
             i = 1
             for mc in mannschaft_comps:
@@ -794,7 +794,7 @@ def save_grade(request, athlete_id):
                 print(cursor.rowcount)
 
                 # Update Ranking aller Mannschaften im gleichen Wettkampf
-                mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"])
+                mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschahft__dbid=request.POST["dbid"])
                 for mc in mannschaft_comps:
                     cursor.execute("UPDATE mannschaft SET Rang=%s WHERE StartnummerMannschaft=%s", (mc.ranking, mc.mannschaft_id))
                 db.commit()
@@ -1099,7 +1099,7 @@ def database_import(request):
             # Mannschaften importieren
             c.execute("SELECT m.StartnummerMannschaft, v.VereinsName, m.MannschaftsNr, m.Abzug, m.Endpunktzahl, m.Rang, m.Tagespunktzahl1, m.Tagespunktzahl2, m.WettkampfId FROM mannschaft as m INNER JOIN vereine as v ON m.Verein=v.VereinsNummer ORDER BY m.StartnummerMannschaft")
             for row in c.fetchall():
-                mannschaft = Mannschaft(mid=row[0], verein=row[1], mannschaftsnr=row[2])
+                mannschaft = Mannschaft(mid=row[0], verein=row[1], mannschaftsnr=row[2], dbid=1)
                 mannschaft.save()
                 if row[3] is None:
                     row = (row[0], row[1], row[2], 0, row[4], row[5], row[6], row[7], row[8])
@@ -1279,7 +1279,7 @@ def database_import(request):
                             context,
                         )
                     else:
-                        mannschaft = Mannschaft(mid=row[0], verein=row[1], mannschaftsnr=row[2])
+                        mannschaft = Mannschaft(mid=row[0], verein=row[1], mannschaftsnr=row[2], dbid=2)
                         mannschaft.save()
                         if row[3] is None:
                             row = (row[0], row[1], row[2], 0, row[4], row[5], row[6], row[7], row[8])
@@ -1312,7 +1312,7 @@ def database_import(request):
                     )
                 else:  
                     if settings_dict['wk_type'] == 'mannschaft':
-                        athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=1, riege=row[8], mannschaft_id=row[9], ak=row[10])
+                        athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=2, riege=row[8], mannschaft_id=row[9], ak=row[10])
                     else: 
                         athlete = Athlete(sid=row[0], vorname=row[1], nachname=row[2], geburtsjahr=row[3], verein=row[4], dbid=2, riege=row[8], ak=row[9])
                     athlete.save()
