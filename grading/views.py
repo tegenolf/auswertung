@@ -794,7 +794,7 @@ def save_grade(request, athlete_id):
                 print(cursor.rowcount)
 
                 # Update Ranking aller Mannschaften im gleichen Wettkampf
-                mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschahft__dbid=request.POST["dbid"])
+                mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschaft__dbid=request.POST["dbid"])
                 for mc in mannschaft_comps:
                     cursor.execute("UPDATE mannschaft SET Rang=%s WHERE StartnummerMannschaft=%s", (mc.ranking, mc.mannschaft_id))
                 db.commit()
