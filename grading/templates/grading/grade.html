@@ -150,41 +150,45 @@
     {% else %}
     <script rel="text/javascript" language="javascript">
         function updateScore() {
-            const kari1 = parseFloat(document.getElementById("kari1").value) || 0;
-            const kari2 = parseFloat(document.getElementById("kari2").value) || 0;
-            const kari3 = parseFloat(document.getElementById("kari3").value) || 0;
-            const kari4 = parseFloat(document.getElementById("kari4").value) || 0;
-            const kari5 = parseFloat(document.getElementById("kari5").value) || 0;
+            const kari1 = new Decimal(parseFloat(document.getElementById("kari1").value) || 0);
+            const kari2 = new Decimal(parseFloat(document.getElementById("kari2").value) || 0);
+            const kari3 = new Decimal(parseFloat(document.getElementById("kari3").value) || 0);
+            const kari4 = new Decimal(parseFloat(document.getElementById("kari4").value) || 0);
+            const kari5 = new Decimal(parseFloat(document.getElementById("kari5").value) || 0);
 
             const karis = [kari1, kari2, kari3, kari4, kari5];
-            ewert = 0;
+            ewert = new Decimal(0);
             // Count number of nonzeros
-            const number = karis.filter(function(x) {return x > 0;}).length;
+            zero = new Decimal(0);
+            const number = karis.filter(function(x) {return x.gt(zero);}).length;
             if (number <= 1 ){
-                ewert = 10 - karis.reduce((a, b) => a + b, 0);
+                average = karis.reduce((a, b) => a.plus(b), zero);
+                ewert = new Decimal(10).minus(average);
             }
             else if (number == 2){
-                ewert = 10 - (karis.reduce((a, b) => a + b, 0) / 2);
+                average = karis.reduce((a, b) => a.plus(b), zero).dividedBy(2);
+                ewert = new Decimal(10).minus(average);
             }
             else if (number == 3){
                 // Alle drei Werte mitteln und das Ergebnis in der ersten Nachkommastelle runden
-                const average = karis.reduce((a, b) => a + b, 0) / 3;
-                ewert = 10 - (Math.floor(average * 10) / 10);
+                average = karis.reduce((a, b) => a.plus(b), zero).dividedBy(3);
+                ewert = new Decimal(10).minus(average.toDecimalPlaces(1, Decimal.ROUND_DOWN));
+                //ewert = 10 - (Math.floor(average * 10) / 10);
                 //const mittel = Math.floor(10 * karis.slice(1,5).reduce((a, b) => a + b, 0) / 2) / 10;
                 //ewert = 10 - ((karis[0] + mittel) / 2);
             }
             else if (number == 4){
-                karis.sort((a, b) => a - b);
+                karis.sort((a, b) => a.minus(b));
                 const trimmedKaris = karis.slice(2, 4);
-                ewert = 10 - (trimmedKaris.reduce((a, b) => a + b, 0) / trimmedKaris.length);
+                ewert = new Decimal(10).minus(trimmedKaris.reduce((a, b) => a.plus(b), zero).dividedBy(trimmedKaris.length));
             }
             
             
             document.getElementById("ewert").value = ewert.toFixed(3);
 
-            const dwert = parseFloat(document.getElementById("dwert").value) || 0;
-            const awert = parseFloat(document.getElementById("awert").value) || 0;
-            const score = ewert + dwert - awert;
+            const dwert = new Decimal(parseFloat(document.getElementById("dwert").value) || 0);
+            const awert = new Decimal(parseFloat(document.getElementById("awert").value) || 0);
+            const score = ewert.plus(dwert).minus(awert);
             
             document.getElementById("score").value = score.toFixed(3);
         }
