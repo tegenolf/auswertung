@@ -378,3 +378,8 @@ div.not_graded {
 div.graded {
     background-color: lightgreen;
 }
+
+div.reload_box {
+    float: right;
+    margin-top: -20px;
+}

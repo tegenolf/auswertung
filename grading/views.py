@@ -384,16 +384,16 @@ class AllResultsView(LoginRequiredMixin, UserPassesTestMixin, generic.ListView):
         settings_dict = read_settings_xml()
         if settings_dict['wk_type'] == 'mannschaft':
             if self.request.GET.get('cid'):
-                return Mannschaft_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("mannschaft", "competition")
+                return Mannschaft_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by(F("ranking").desc(nulls_last=True)).select_related("mannschaft", "competition")
             else:
                 id = Competition.objects.first().cid if Competition.objects.first() else None
-                return Mannschaft_Comp.objects.filter(competition_id=id).order_by("ranking").select_related("mannschaft", "competition")
+                return Mannschaft_Comp.objects.filter(competition_id=id).order_by(F("ranking").desc(nulls_last=True)).select_related("mannschaft", "competition")
         else:
             if self.request.GET.get('cid'):
-                return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
+                return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by(F("ranking").desc(nulls_last=True)).select_related("athlete", "competition")
             else:
                 id = Competition.objects.first().cid if Competition.objects.first() else None
-                return Athlete_Comp.objects.filter(competition_id=id).order_by("ranking").select_related("athlete", "competition")
+                return Athlete_Comp.objects.filter(competition_id=id).order_by(F("ranking").desc(nulls_last=True)).select_related("athlete", "competition")
     
     def test_func(self):
         user = self.request.user
@@ -636,7 +636,10 @@ def save_grade(request, athlete_id):
                 previous_score = ac.total_score
             else:
                 if previous_score != ac.total_score:
-                    ranking = i
+                    if ac.total_score is not None:
+                        ranking = i
+                    else:
+                        ranking = None
                     previous_score = ac.total_score
                 ac.ranking = ranking
             ac.save()
@@ -733,7 +736,10 @@ def save_grade(request, athlete_id):
                     previous_score = mc.score
                 else:
                     if previous_score != mc.score:
-                        ranking = i
+                        if mc.score is not None:
+                            ranking = i
+                        else:
+                            ranking = None
                         previous_score = mc.score
                     mc.ranking = ranking
                 mc.save()
