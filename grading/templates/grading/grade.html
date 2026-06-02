@@ -160,7 +160,7 @@
             ewert = 0;
             // Count number of nonzeros
             const number = karis.filter(function(x) {return x > 0;}).length;
-            if (number == 1){
+            if (number <= 1 ){
                 ewert = 10 - karis.reduce((a, b) => a + b, 0);
             }
             else if (number == 2){
