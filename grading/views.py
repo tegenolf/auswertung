@@ -1511,7 +1511,7 @@ def database_clean_duplicates(request):
                 db = MySQLdb.connect(host=settings_dict['db2_host'], port=int(settings_dict['db2_port']), user=settings_dict['db2_user'], passwd=settings_dict['db2_password'], db=settings_dict['db2_name'])
             c = db.cursor()
         except:
-            context = read_settings_xml()
+            context = settings_dict
             context['error_message'] = "Fehler beim Verbinden mit Datenbank "+ str(i) + ". Bitte überprüfen Sie die Einstellungen."
             return render(
                 request,
@@ -1519,24 +1519,44 @@ def database_clean_duplicates(request):
                 context,
             )
         try:
-            # Ergebnisse laden
-            c.execute("SELECT DISTINCT * FROM ergebnisse")
+            # Einzel-Ergebnisse laden
+            c.execute("SELECT DISTINCT Startnummer, DisziplinID, Leistung, Punktzahl, Runde FROM ergebnisse")
             results = c.fetchall()
             c.execute("DELETE FROM ergebnisse")
             db.commit()
             for row in results:
-                c.execute("INSERT INTO ergebnisse(Startnummer,DisziplinID,Leistung,Punktzahl,Gerätezahl,Runde,Gesperrt) VALUES(%s,%s,%s,%s,%s,%s,%s)",(row[0],row[1],row[2],row[3],row[4],row[5],row[6]))
+                c.execute("INSERT INTO ergebnisse(Startnummer,DisziplinID,Leistung,Punktzahl,Runde) VALUES(%s,%s,%s,%s,%s)",(row[0],row[1],row[2],row[3],row[4]))
             db.commit()
-            c.close()
+            if settings_dict['wk_type'] == 'einzel':
+                c.close()
         except:
-            context = read_settings_xml()
-            context['error_message'] = "Beim Löschen der Duplikate aus Datenbank " + str(i) + " ist ein Fehler aufgetreten."
+            context = settings_dict
+            context['error_message'] = "Beim Löschen der Einzelergebnis-Duplikate aus Datenbank " + str(i) + " ist ein Fehler aufgetreten."
             return render(
                 request,
                 "grading/database.html",
                 context,
             )
-    context = read_settings_xml()
+        if settings_dict['wk_type'] == 'mannschaft':
+            try:
+                # Mannschafts-Ergebnisse laden
+                c.execute("SELECT DISTINCT Startnummer, DisziplinID, Punktzahl, Runde FROM ergebnissemannschaft")
+                results = c.fetchall()
+                c.execute("DELETE FROM ergebnissemannschaft")
+                db.commit()
+                for row in results:
+                    c.execute("INSERT INTO ergebnissemannschaft(Startnummer,DisziplinID,Punktzahl,Runde) VALUES(%s,%s,%s,%s)",(row[0],row[1],row[2],row[3]))
+                db.commit()
+                c.close()
+            except:
+                context = read_settings_xml()
+                context['error_message'] = "Beim Löschen der Mannschaftsergebnis-Duplikate aus Datenbank " + str(i) + " ist ein Fehler aufgetreten."
+                return render(
+                    request,
+                    "grading/database.html",
+                    context,
+                )
+    context = settings_dict
     context['success_message'] = "Löschen der Duplikate erfolgreich."
     return render(
         request,
