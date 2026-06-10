@@ -128,12 +128,9 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
                 result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=self.request.GET.get('riege')).order_by("athlete_id","competition_id").select_related("athlete", "competition")
             else:
                 result = Athlete_Comp.objects.filter(athlete__riege=self.request.GET.get('riege')).order_by("athlete_id","competition_id").select_related("athlete", "competition")
-        #if self.request.GET.get('cid'):
-        #    return Athlete_Comp.objects.filter(competition_id=self.request.GET.get('cid')).order_by("ranking").select_related("athlete", "competition")
         else:
             if settings_dict['wk_type'] == 'mannschaft':
                 allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(self.request.user.id)]
-                #id = Athlete.objects.filter(mannschaft__isnull=False).all().aggregate(Min('mannschaft'))['mannschaft__min'] if Athlete.objects.filter(mannschaft__isnull=False).exists() else None
                 if len(allowed_mids) > 0:
                     result = Athlete_Comp.objects.filter(athlete__mannschaft__mid=allowed_mids[0]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
                 else:
@@ -141,10 +138,6 @@ class RiegenView(LoginRequiredMixin, generic.ListView):
             else:
                 id = Athlete.objects.filter(riege__isnull=False).all().aggregate(Min('riege'))['riege__min'] if Athlete.objects.filter(riege__isnull=False).exists() else None
                 result = Athlete_Comp.objects.filter(athlete__riege=id).order_by("athlete_id","competition_id").select_related("athlete", "competition")
-        allowed_results = []
-        for entry in result:
-            if entry.athlete.allowed_to_grade(self.request.user.id):
-                allowed_results.append(entry)
         return result
     
     def get_context_data(self, **kwargs):
@@ -705,7 +698,7 @@ def save_grade(request, athlete_id):
                     mannschaft_comp.score_day1 = 0
                 if mannschaft_comp.score_day2 is None:
                     mannschaft_comp.score_day2 = 0
-                mannschaft_comp.score = mannschaft_comp.score_day1 + mannschaft_comp.score_day2
+                mannschaft_comp.score = mannschaft_comp.score_day1 + mannschaft_comp.score_day2 - mannschaft_comp.abzug
             except Mannschaft_Comp.DoesNotExist:
                 if int(settings_dict['runde']) is None or int(settings_dict['runde']) < 2:
                     mannschaft_comp = Mannschaft_Comp(competition_id=request.POST["cid"], mannschaft_id=athlete_comp.athlete.mannschaft.mid, score_day1=total_team_score, score_day2=0, score=total_team_score)
@@ -797,8 +790,7 @@ def save_grade(request, athlete_id):
 
                 # Update Gesamtwertung
                 cursor.execute("UPDATE mannschaft SET Tagespunktzahl1=%s, Tagespunktzahl2=%s, Endpunktzahl=%s WHERE StartnummerMannschaft=%s", (mannschaft_comp.score_day1,mannschaft_comp.score_day2,mannschaft_comp.score, athlete_comp.athlete.mannschaft.mid))
-                print(cursor.rowcount)
-
+                
                 # Update Ranking aller Mannschaften im gleichen Wettkampf
                 mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschaft__dbid=request.POST["dbid"])
                 for mc in mannschaft_comps:
@@ -1619,3 +1611,212 @@ def database_reset_grading(request):
         "grading/database.html",
         context,
     )
+
+@login_required
+def team_deduction(request):
+
+    user = request.user
+    if not (user.is_superuser or user.is_staff):
+        riegen_list= Athlete_Comp.objects.filter(athlete__mannschaft__mid=request.POST["mid"]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+        if riegen_list is not None:
+            for entry in riegen_list:
+                    # alle Disziplinen des Wettkampfs
+                    entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+                    # bereits vorhandene Wertungen
+                    entry.grading = []
+                    for d in entry.disciplines:
+                        d.score = None
+                        d.allowed_to_grade = d.allowed_to_grade(request.user.id)
+                        if int(settings_dict['runde']) > 0:
+                            grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(settings_dict['runde'])).first()
+                        else:
+                            grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                        if grading is not None and grading.score > 0:
+                            d.score = grading.score
+        competitions = Competition.objects.all().order_by("cid")
+        allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(request.user.id)]
+        riegen = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+        selected_riege_data = Mannschaft_Comp.objects.filter(mannschaft_id=request.POST.get('mid')).select_related("mannschaft", "competition").first()
+        if not selected_riege_data.mannschaft.allowed_to_grade(request.user.id):
+            selected_riege_data = None
+        return render(
+            request,
+            "grading/riegen.html",
+            {
+                "riegen_list": riegen_list,
+                "competitions": competitions,
+                "riegen": riegen,
+                "selected_riege": request.POST["mid"],
+                "settings_dict": settings_dict,
+                "selected_riege_data": selected_riege_data,
+                "error_message": "Sie haben keine Berechtigung, diese Wertung zu ändern.",
+            },
+        )
+    settings_dict = read_settings_xml()
+
+    # Mannschaftswertung aktualisieren, falls es sich um einen Mannschaftswettkampf handelt
+    try:
+        if settings_dict['wk_type'] == 'mannschaft': 
+            try:
+                mannschaft_comp = Mannschaft_Comp.objects.get(competition_id=request.POST["cid"], mannschaft_id=request.POST["mid"])
+                print(request.POST["abzug"])
+                mannschaft_comp.abzug = float(request.POST["abzug"])
+                print(mannschaft_comp.abzug)
+                mannschaft_comp.score = mannschaft_comp.score_day1 + mannschaft_comp.score_day2 - mannschaft_comp.abzug
+                if mannschaft_comp.score < 0:
+                    mannschaft_comp.score = 0
+            except Mannschaft_Comp.DoesNotExist:
+                    mannschaft_comp = Mannschaft_Comp(competition_id=request.POST["cid"], mannschaft_id=request.POST["mid"], score_day1=0, score_day2=0, abzug=int(request.POST["abzug"]), score=0)
+            
+            mannschaft_comp.save()
+
+            # Ranking aktualisieren
+            mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschaft__dbid=mannschaft_comp.mannschaft.dbid).order_by('-score')
+            ranking = 1
+            i = 1
+            for mc in mannschaft_comps:
+                if i == 1:
+                    mc.ranking = ranking
+                    previous_score = mc.score
+                else:
+                    if previous_score != mc.score:
+                        if mc.score is not None:
+                            ranking = i
+                        else:
+                            ranking = None
+                        previous_score = mc.score
+                    mc.ranking = ranking
+                mc.save()
+                i += 1
+
+            # Didis Datenbank aktualisieren
+            try:
+                # Datenbankverbindung basierend auf dbid herstellen
+                if mannschaft_comp.mannschaft.dbid == 1:
+                    db = MySQLdb.connect(host=settings_dict['db1_host'], user=settings_dict['db1_user'], passwd=settings_dict['db1_password'], db=settings_dict['db1_name'], port=int(settings_dict['db1_port']))
+                elif mannschaft_comp.mannschaft.dbid == 2:
+                    db = MySQLdb.connect(host=settings_dict['db2_host'], user=settings_dict['db2_user'], passwd=settings_dict['db2_password'], db=settings_dict['db2_name'], port=int(settings_dict['db2_port']))        
+                cursor = db.cursor()
+
+                # Update Mannschaftswertung in Didis Datenbank
+                # Update Gesamtwertung
+                cursor.execute("UPDATE mannschaft SET Abzug=%s, Endpunktzahl=%s WHERE StartnummerMannschaft=%s", (mannschaft_comp.abzug,mannschaft_comp.score, request.POST["mid"]))
+                
+                # Update Ranking aller Mannschaften im gleichen Wettkampf
+                mannschaft_comps = Mannschaft_Comp.objects.filter(competition_id=request.POST["cid"],mannschaft__dbid=mannschaft_comp.mannschaft.dbid)
+                for mc in mannschaft_comps:
+                    cursor.execute("UPDATE mannschaft SET Rang=%s WHERE StartnummerMannschaft=%s", (mc.ranking, mc.mannschaft_id))
+                db.commit()
+                cursor.close()
+            except MySQLdb.Error as e:
+                riegen_list= Athlete_Comp.objects.filter(athlete__mannschaft__mid=request.POST["mid"]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+                if riegen_list is not None:
+                    for entry in riegen_list:
+                            # alle Disziplinen des Wettkampfs
+                            entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+                            # bereits vorhandene Wertungen
+                            entry.grading = []
+                            for d in entry.disciplines:
+                                d.score = None
+                                d.allowed_to_grade = d.allowed_to_grade(request.user.id)
+                                if int(settings_dict['runde']) > 0:
+                                    grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(settings_dict['runde'])).first()
+                                else:
+                                    grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                                if grading is not None and grading.score > 0:
+                                    d.score = grading.score
+                competitions = Competition.objects.all().order_by("cid")
+                allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(request.user.id)]
+                riegen = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+                selected_riege_data = Mannschaft_Comp.objects.filter(mannschaft_id=request.POST["mid"]).select_related("mannschaft", "competition").first()
+                if not selected_riege_data.mannschaft.allowed_to_grade(request.user.id):
+                    selected_riege_data = None
+                return render(
+                    request,
+                    "grading/riegen.html",
+                    {
+                        "riegen_list": riegen_list,
+                        "competitions": competitions,
+                        "riegen": riegen,
+                        "selected_riege": request.POST["mid"],
+                        "settings_dict": settings_dict,
+                        "selected_riege_data": selected_riege_data,
+                        "error_message": f"Fehler beim Speichern des Abzugs in Didis Datenbank: {e}",
+                    },
+                )
+
+            logs = Logs(user=request.user, ip=get_client_ip(request), competition_id=request.POST["cid"], log_text="Einmaliger Abzug bei Mannschaft "+str(request.POST["mid"])+" geändert.", log_date=timezone.now())
+            logs.save()
+    except (KeyError, ValueError):
+        riegen_list= Athlete_Comp.objects.filter(athlete__mannschaft__mid=request.POST["mid"]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+        if riegen_list is not None:
+            for entry in riegen_list:
+                    # alle Disziplinen des Wettkampfs
+                    entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+                    # bereits vorhandene Wertungen
+                    entry.grading = []
+                    for d in entry.disciplines:
+                        d.score = None
+                        d.allowed_to_grade = d.allowed_to_grade(request.user.id)
+                        if int(settings_dict['runde']) > 0:
+                            grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(settings_dict['runde'])).first()
+                        else:
+                            grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                        if grading is not None and grading.score > 0:
+                            d.score = grading.score
+        competitions = Competition.objects.all().order_by("cid")
+        allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(request.user.id)]
+        riegen = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+        selected_riege_data = Mannschaft_Comp.objects.filter(mannschaft_id=request.POST["mid"]).select_related("mannschaft", "competition").first()
+        if not selected_riege_data.mannschaft.allowed_to_grade(request.user.id):
+            selected_riege_data = None
+
+        return render(
+            request,
+            "grading/riegen.html",
+            {
+                "riegen_list": riegen_list,
+                "competitions": competitions,
+                "riegen": riegen,
+                "selected_riege": request.POST["mid"],
+                "settings_dict": settings_dict,
+                "selected_riege_data": selected_riege_data,
+                "error_message": "Fehlende oder ungültige Eingabe.",
+            },
+        )
+    
+    riegen_list= Athlete_Comp.objects.filter(athlete__mannschaft__mid=request.POST["mid"]).order_by("athlete_id","competition_id").select_related("athlete", "competition")
+    if riegen_list is not None:
+        for entry in riegen_list:
+                # alle Disziplinen des Wettkampfs
+                entry.disciplines = Comp_Dis.objects.filter(competition_id=entry.competition.cid).order_by("discipline_id").select_related("discipline")
+                # bereits vorhandene Wertungen
+                entry.grading = []
+                for d in entry.disciplines:
+                    d.score = None
+                    d.allowed_to_grade = d.allowed_to_grade(request.user.id)
+                    if int(settings_dict['runde']) > 0:
+                        grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did, day=int(settings_dict['runde'])).first()
+                    else:
+                        grading = Grading.objects.filter(athlete_id=entry.athlete.sid, competition_id=entry.competition.cid, discipline_id=d.discipline.did).first()
+                    if grading is not None and grading.score > 0:
+                        d.score = grading.score
+    competitions = Competition.objects.all().order_by("cid")
+    allowed_mids = [mannschaft.mid for mannschaft in Mannschaft.objects.order_by("mid").all() if mannschaft.allowed_to_grade(request.user.id)]
+    riegen = Mannschaft.objects.filter(mid__in=allowed_mids).values_list('mid', flat=True).distinct().order_by('mid')
+    selected_riege_data = Mannschaft_Comp.objects.filter(mannschaft_id=request.POST["mid"]).select_related("mannschaft", "competition").first()
+    if not selected_riege_data.mannschaft.allowed_to_grade(request.user.id):
+        selected_riege_data = None
+    return render(
+            request,
+            "grading/riegen.html",
+            {
+                "riegen_list": riegen_list,
+                "competitions": competitions,
+                "riegen": riegen,
+                "selected_riege": request.POST["mid"],
+                "settings_dict": settings_dict,
+                "selected_riege_data": selected_riege_data,
+                "success_message": "Abzug gespeichert.",
+            },
+        )  

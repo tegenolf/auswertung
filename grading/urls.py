@@ -51,5 +51,7 @@ urlpatterns = [
     path("clean_duplicates/", views.database_clean_duplicates, name="database_clean_duplicates"),
     # ex: /grading/database_reset_grading/ -> Funktion zum Übertragen der Ergebnisse aus Django-Datenbank in Didis Datenbank
     path("reset_grading/", views.database_reset_grading, name="database_reset_grading"),
+    # ex: /grading/team_deduction/ -> Funktion zum Speichern der Mannschaftsabzüge
+    path("team_deduction/", views.team_deduction, name="team_deduction"),
 
 ]

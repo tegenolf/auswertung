@@ -11,6 +11,17 @@
                         <td>{% for dis in entry.disciplines %}<div class="discipline_box {% if dis.allowed_to_grade %} {% if dis.score > 0 %} graded {% else %} not_graded {% endif %}{% endif %}">{% if dis.allowed_to_grade %}<a href="{% url 'grading:grade' entry.athlete.sid %}?cid={{entry.competition.cid}}&did={{dis.discipline.did}}">{% endif %}{{ dis.discipline.bezeichnung }}{% if dis.score > 0 %}<br /> <span class="small">({{dis.score}})</span>{% endif %}{% if dis.allowed_to_grade %}</a>{% endif %}</div>{% endfor %}</td></tr>
                 {% endfor %}
             </table>
+            {% if user.is_superuser or user.is_staff %}
+                <!-- Formular zum Eintragen eines einmaligen Mannschaftsabzugs -->
+                <form method="post" action="{% url 'grading:team_deduction' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="mid" value="{{ selected_riege }}">
+                    <input type="hidden" name="cid" value="{{ selected_riege_data.competition.cid }}">
+                    <label for="deduction_points" style="margin-left:40px;">Mannschaftsabzug:</label>
+                    <input type="number" step="0.1" id="deduction_points" name="abzug" value="{{ selected_riege_data.abzug}}"" min="0" required style="width:80px; margin-left:10px;margin-right:10px;">
+                    <button type="submit">speichern</button>
+                </form>
+            {% endif %}
         </div>
     {% else %}
         <p>In dieser Mannschaft sind keine SportlerInnen vorhanden.</p>

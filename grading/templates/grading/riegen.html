@@ -1,5 +1,12 @@
 {% extends 'base.html' %}
 
+{% block error %}
+    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% endblock error %}
+{% block success %}
+    {% if success_message %}<p><strong>{{ success_message }}</strong></p>{% endif %}
+{% endblock success %}
+
 {% block content %}
     {% if settings_dict.wk_type == 'mannschaft' %}
         <h1>Mannschaften</h1>

@@ -14,6 +14,7 @@
                     <table><tr><td>&nbsp;</td>{% for dis in ranking.disciplines %}<td><span class="small">{{ dis.bezeichnung }}</span></td>{% endfor %}</tr>
                     {% for ath in ranking.athletes_disciplines %}<tr><td><span class="small">{{ ath.vorname }} {{ ath.nachname }}</span></td>{% for score in ath.disciplines %}<td><span class="small">{% if score.score %}{{ score.score }}{% else %}0{% endif %}</span></td>{% endfor %}</tr>{% endfor %}
                     <tr><td></td>{% for sc in ranking.team_scores %}<td><span class="small">{% if sc.score %}{{ sc.score }}{% else %}0{% endif %}</span></td>{% endfor %}</tr></table>
+                    {% if ranking.abzug != 0 %}<span class="small"><br>Einmaliger Mannschaftsabzug: {{ ranking.abzug }}</span>{% endif %}
                     </td><td style="vertical-align:top;">{% if settings_dict.runde == "1" %}{% if ranking.score_day1 %}{{ ranking.score_day1 }}{% else %}--{% endif %}{% if ranking.score_day2 > 0 %}<br><span class="small">(Runde 2: {{ ranking.score_day2 }})</span>{% endif %}{% elif settings_dict.runde == "2" %}{% if ranking.score_day2 %}{{ ranking.score_day2 }}{% else %}--{% endif %}<br><span class="small">(Runde 1: {{ ranking.score_day1 }})</span>{% endif %}</td><td style="vertical-align:top;">{% if ranking.score %}{{ ranking.score }}{% else %}--{% endif %}</td></tr>
             {% endfor %}
         </table>
